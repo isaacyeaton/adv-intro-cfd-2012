@@ -1,0 +1,285 @@
+% Isaac J. Yeaton
+% Oct 5, 2012
+%
+% LaTeX template for general report writing
+
+% top matter
+\documentclass[11pt, letterpaper]{article}
+
+% load packages
+%\usepackage{showkeys}   % show labels in document
+%\usepackage{paralist}   % in-paragraph lists
+\usepackage{graphicx}   % for including figures
+\usepackage{epstopdf}   % enable .eps images when using pdflatex
+\usepackage{hyperref}   % including links within document
+\usepackage{amsmath}    % more featurefull math tools
+\usepackage{amssymb}    % even more math symbols
+\usepackage{geometry}   % specify page dimensions
+\usepackage{siunitx}    % for including units
+\usepackage{listings}   % formatted code
+\usepackage{appendix}   % actual appendix environment
+\usepackage{varioref}   % smart page, figure, table, and equation referencing
+\usepackage{wrapfig}    % wrap figures/tables in text (i.e., Di Vinci style)
+\usepackage{fancyvrb}   % extended verbatim environments
+\usepackage{subfigmat}  % matrices of similar subfigures, aka small mulitples
+\usepackage{nomencl}    % inserting nomenclature
+\usepackage{pdfpages}   % including external pdfs
+\usepackage{subfigure}  % adding subfigures
+\usepackage{longtable}  % multipage tables
+\usepackage{setspace}   % change spacing for document
+\usepackage[all]{hypcap}        % make links point to top of image
+\usepackage{threeparttable}     % tables with footnotes
+%\usepackage[parfill]{parskip}   % modify paragraph breaks and spacing
+\usepackage[version=3]{mhchem}  % chemical equations and notation
+
+% modify the spacing
+\frenchspacing   % modify the spacing between words
+%\onehalfspacing  % put more space between lines
+
+% modify some packages
+%\geometry{margin=1in}
+\geometry{letterpaper}
+\hypersetup{colorlinks=true, linkcolor=black,
+            citecolor=black, urlcolor=black}
+
+% include code
+\lstset{language=Python, basicstyle=\footnotesize, frame=single,
+        numbers=left}
+
+% bibliography
+\usepackage[square, numbers, sort&compress, comma]{natbib}
+\bibliographystyle{plainnat}
+
+%% -------------------------------------------------------------------------
+
+% user defined commands
+\newcommand{\bibproj}[0]{../bibs/tmp1}  %TODO add a bib file here...
+\newcommand{\bibbook}[0]{../bibs/tmp2}  %TODO add another bib file here...
+\newcommand{\fig}[1]{figure~\ref{#1}}
+\newcommand{\sect}[1]{section~\ref{#1}}
+\newcommand{\eqn}[1]{equation~\eqref{#1}}
+\newcommand{\tab}[1]{table~\ref{#1}}
+\newcommand{\comment}[1]{}  % easy way to block out text
+
+% shortcuts
+
+
+%% -------------------------------------------------------------------------
+
+% headings to be displayed
+\pagestyle{myheadings}
+\markright{Isaac~Yeaton -- \LaTeX\ template}
+
+% document parameters
+\title{\LaTeX\ template}
+\author{Isaac J.~Yeaton}
+\date{October 5, 2012}
+
+%% -------------------------------------------------------------------------
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+%% -------------------------------------------------------------------------
+
+\begin{abstract}
+	Include the abstract here...
+\end{abstract}
+
+% TOC and LOF
+\tableofcontents
+\listoffigures
+
+%% -------------------------------------------------------------------------
+
+\section{Introduction}
+
+When writing Dr, use Dr.\ Lowe (with a \verb|.\|) to prevent excess space after the 
+period.  Also, put a \verb|~| in you don't want a line to break between the two works.
+
+Start new lines when you reach the end of the editor window...don't just keep
+writing or you will have a paragraph that spans multiple lines, making it
+harder to edit when using a different editor.
+
+Look at the other folders for example of including figures and bibliography.
+
+\section{Some sample environments}
+
+Using \texttt{itemize}:
+%
+\begin{itemize}
+	\item This
+	\item That
+	\begin{itemize}
+		\item subitem
+		\item another
+	\end{itemize}
+	\item end of list
+\end{itemize}
+
+Using \texttt{enumerate}:
+%
+\begin{enumerate}
+	\item This
+	\item That
+	\begin{itemize}
+		\item subitem
+		\item another
+	\end{itemize}
+	\item end of list
+\end{enumerate}
+
+%\begin{figure}
+%	\centering
+%	\includegraphics[scale=1]{./figs/tmp.png}
+%	\caption{Excellent caption.}
+%	\label{fig:fig_desc}
+%\end{figure}
+
+\section{Conclusion}
+
+
+\end{document}
+% Isaac J. Yeaton
+% Oct 5, 2012
+%
+% LaTeX template for general report writing
+
+% top matter
+\documentclass[11pt, letterpaper]{article}
+
+% load packages
+%\usepackage{showkeys}   % show labels in document
+%\usepackage{paralist}   % in-paragraph lists
+\usepackage{graphicx}   % for including figures
+\usepackage{epstopdf}   % enable .eps images when using pdflatex
+\usepackage{hyperref}   % including links within document
+\usepackage{amsmath}    % more featurefull math tools
+\usepackage{amssymb}    % even more math symbols
+\usepackage{geometry}   % specify page dimensions
+\usepackage{siunitx}    % for including units
+\usepackage{listings}   % formatted code
+\usepackage{appendix}   % actual appendix environment
+\usepackage{varioref}   % smart page, figure, table, and equation referencing
+\usepackage{wrapfig}    % wrap figures/tables in text (i.e., Di Vinci style)
+\usepackage{fancyvrb}   % extended verbatim environments
+\usepackage{subfigmat}  % matrices of similar subfigures, aka small mulitples
+\usepackage{nomencl}    % inserting nomenclature
+\usepackage{pdfpages}   % including external pdfs
+\usepackage{subfigure}  % adding subfigures
+\usepackage{longtable}  % multipage tables
+\usepackage{setspace}   % change spacing for document
+\usepackage[all]{hypcap}        % make links point to top of image
+\usepackage{threeparttable}     % tables with footnotes
+%\usepackage[parfill]{parskip}   % modify paragraph breaks and spacing
+\usepackage[version=3]{mhchem}  % chemical equations and notation
+
+% modify the spacing
+\frenchspacing   % modify the spacing between words
+%\onehalfspacing  % put more space between lines
+
+% modify some packages
+\geometry{margin=1in}
+\hypersetup{colorlinks=true, linkcolor=black,
+            citecolor=black, urlcolor=black}
+
+% include code
+\lstset{language=Python, basicstyle=\footnotesize, frame=single,
+        numbers=left}
+
+% bibliography
+\usepackage[square, numbers, sort&compress, comma]{natbib}
+\bibliographystyle{plainnat}
+
+%% -------------------------------------------------------------------------
+
+% user defined commands
+\newcommand{\bibproj}[0]{../bibs/tmp1}  %TODO add a bib file here...
+\newcommand{\bibbook}[0]{../bibs/tmp2}  %TODO add another bib file here...
+\newcommand{\fig}[1]{figure~\ref{#1}}
+\newcommand{\sect}[1]{section~\ref{#1}}
+\newcommand{\eqn}[1]{equation~\eqref{#1}}
+\newcommand{\tab}[1]{table~\ref{#1}}
+\newcommand{\comment}[1]{}  % easy way to block out text
+
+% shortcuts
+
+
+%% -------------------------------------------------------------------------
+
+% headings to be displayed
+\pagestyle{myheadings}
+\markright{I.~Yeaton -- \LaTeX\ template}
+
+% document parameters
+\title{\LaTeX\ template}
+\author{Isaac J.~Yeaton}
+\date{October 5, 2012}
+
+%% -------------------------------------------------------------------------
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+%% -------------------------------------------------------------------------
+
+\begin{abstract}
+	Include the abstract here...
+\end{abstract}
+
+% TOC and LOF
+\tableofcontents
+\listoffigures
+
+%% -------------------------------------------------------------------------
+
+\section{Introduction}
+
+When writing Dr, use Dr.\ Lowe (with a \verb|.\|) to prevent excess space after the 
+period.  Also, put a \verb|~| in you don't want a line to break between the two works.
+
+Start new lines when you reach the end of the editor window...don't just keep
+writing or you will have a paragraph that spans multiple lines, making it
+harder to edit when using a different editor.
+
+Look at the other folders for example of including figures and bibliography.
+
+\section{Some sample environments}
+
+Using \texttt{itemize}:
+%
+\begin{itemize}
+	\item This
+	\item That
+	\begin{itemize}
+		\item subitem
+		\item another
+	\end{itemize}
+	\item end of list
+\end{itemize}
+
+Using \texttt{enumerate}:
+%
+\begin{enumerate}
+	\item This
+	\item That
+	\begin{itemize}
+		\item subitem
+		\item another
+	\end{itemize}
+	\item end of list
+\end{enumerate}
+
+%\begin{figure}
+%	\centering
+%	\includegraphics[scale=1]{./figs/tmp.png}
+%	\caption{Excellent caption.}
+%	\label{fig:fig_desc}
+%\end{figure}
+
+\section{Conclusion}
+
+
+\end{document}
