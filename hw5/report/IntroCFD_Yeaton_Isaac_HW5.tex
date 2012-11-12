@@ -197,7 +197,8 @@ method should be second order accurate, and it is.
 		\caption{Order of accuracy}
 		\label{fig:MMS_ooa}
 	\end{subfigure}
-	\caption{Manufactured temperature profiles and iterative residuals.}
+	\caption{Relative iterative residuals and order of accuracy for the
+			manufactured solution.}
 \end{figure}
 
 %% -------------------------------------------------------------------------
@@ -231,14 +232,14 @@ $T_{i-2}^n$ were expanded in a Taylor series about the end wall point as follows
 				\mathcal{O}(\Delta x^3) \label{eqn:O2}.
 \end{align}
 %
-For the first-order accurate scheme, eq.~(7) is rearranged for $T_i^n$ as
+For the first-order accurate scheme, eq.~(8) is rearranged for $T_i^n$ as
 %
 \begin{equation}
 	T_{i}^n = T_{i-1}^n + \frac{\p T}{\p x}\bigg|_{i}^n + \mathcal{O}(\Delta x^2).
 \end{equation}
 %
-For the second order accurate scheme, we combine eqns.~(7) and (8) such that the
-second-terms cancel.  We subtract 4(8) from (7) and rearrange to get
+For the second order accurate scheme, we combine eqns.~(8) and (9) such that the
+second-terms cancel.  We subtract 4(9) from (8) and rearrange to get
 %
 \begin{equation}
 	T_i^n = \frac{1}{3} \left[ 4 T_{i-1}^n - T_{i-2}^n + 
@@ -314,7 +315,7 @@ is available at \url{https://github.com/isaacyeaton/adv-intro-cfd-2012}.  A pdf
 version of this notebook is attached below, but an html version is available
 on the Github page as \texttt{hw5.html}.
 
-\includepdf[nup=1x1]{../hw5.pdf}
+\includepdf[nup=1x1, pages={3-}]{../hw5.pdf}
 
 \end{document}
 
