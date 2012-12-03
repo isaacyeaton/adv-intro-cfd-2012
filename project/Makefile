@@ -1,9 +1,18 @@
-CFILE = cavity.template-to-students.c
-FFILE = cavity.template-to-students.f95
-CPPFILE = DrivenCavity.template-to-students.cpp
+SRC = ./src
+BIN = ./bin
+CFILE = $(SRC)/cavity.template-to-students.c
+FFILE = $(SRC)/cavity.template-to-students.f95
+CPPFILE = $(SRC)/DrivenCavity.template-to-students.cpp
 
-compc: $(CFILE)
-	gcc -O3 $(CFILE) -o cavity_c -lm
+c3: $(CFILE)
+	gcc -O3 $(CFILE) -o $(BIN)/cavity_c3 -lm
 
-compf: $(FFILE)
-	gfortran -O3 $(FFILE) -o cavity_f
+f3: $(FFILE)
+	rm $(BIN)/*.mod
+	gfortran -O3 $(FFILE) -o $(BIN)/cavity_f3
+	mv *.mod $(BIN)
+
+f: $(FFILE)
+	rm $(BIN)/*.mod
+	gfortran $(FFILE) -o $(BIN)/cavity_f
+	mv *.mod $(BIN)
