@@ -57,7 +57,7 @@
   const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
   const double toler = 1.e-10; 	/* Tolerance for iterative residual convergence */
   const double rkappa = 0.1;   	/* Time derivative preconditioning constant */
-  const double Re = 100.0;      	/* Reynolds number = rho*Uinf*L/rmu */
+  const double Re = 100.0;      /* Reynolds number = rho*Uinf*L/rmu */
   const double pinf = 0.801333844662; /* Initial pressure (N/m^2) -> from MMS value at cavity center */
   const double uinf = 1.0;      /* Lid velocity (m/s) */
   const double rho = 1.0;       /* Density (kg/m^3) */
@@ -75,7 +75,7 @@
   double rlength = -99.9;  	/* Characteristic length (m) [cavity width] */
   double rmu = -99.9;  		/* Viscosity (N*s/m^2) */
   double vel2ref = -99.9;  	/* Reference velocity squared (m^2/s^2) */
-  double dx = -99.9; 		/*	 Delta x (m) */
+  double dx = -99.9; 		/* Delta x (m) */
   double dy = -99.9;  		/* Delta y (m) */
   double rpi = -99.9; 		/* Pi = 3.14159... (defined below) */
 
@@ -84,12 +84,12 @@
   const double phix[neq] = {0.5, 0.15, 1.0/6.0};      /* MMS amplitude constant */
   const double phiy[neq] = {0.4, 0.2, 0.25};          /* MMS amplitude constant */
   const double phixy[neq] = {1.0/3.0, 0.25, 0.1};     /* MMS amplitude constant */
-  const double apx[neq] = {0.5, 1.0/3.0, 7.0/17.0}; 	/* MMS frequency constant */
-  const double apy[neq] = {0.2, 0.25, 1.0/6.0};         /* MMS frequency constant */
-  const double apxy[neq] = {2.0/7.0, 0.4, 1.0/3.0};     /* MMS frequency constant */
-  const double fsinx[neq] = {0.0, 1.0, 0.0};            /* MMS constant to determine sine vs. cosine */
-  const double fsiny[neq] = {1.0, 0.0, 0.0};            /* MMS constant to determine sine vs. cosine */
-  const double fsinxy[neq] = {1.0, 1.0, 0.0};           /* MMS constant to determine sine vs. cosine */
+  const double apx[neq] = {0.5, 1.0/3.0, 7.0/17.0};   /* MMS frequency constant */
+  const double apy[neq] = {0.2, 0.25, 1.0/6.0};       /* MMS frequency constant */
+  const double apxy[neq] = {2.0/7.0, 0.4, 1.0/3.0};   /* MMS frequency constant */
+  const double fsinx[neq] = {0.0, 1.0, 0.0};          /* MMS constant to determine sine vs. cosine */
+  const double fsiny[neq] = {1.0, 0.0, 0.0};          /* MMS constant to determine sine vs. cosine */
+  const double fsinxy[neq] = {1.0, 1.0, 0.0};         /* MMS constant to determine sine vs. cosine */
                                                       /* Note: fsin = 1 means the sine function */
                                                       /* Note: fsin = 0 means the cosine function */
                                                       /* Note: arrays here refer to the 3 variables */ 
@@ -554,10 +554,12 @@ void bndrymms()
     x = (xmax - xmin)*(double)(i)/(double)(imax - 1);
     j = 0;
     y = ymin;
+    /* interior nodes */
     for( k = 0; k<neq; k++)
     {
       u[i][j][k] = umms(x,y,k);
     }
+    /* edge nodes */
     u[i][0][0] = two*u[i][1][0] - u[i][2][0];   /* 2nd Order BC */
 //$$$$$$     u[i][0][0] = u[i][1][0];            /* 1st Order BC */
 
@@ -769,7 +771,7 @@ double srcmms_xmtm(double x, double y)
   termxy = phixy[2]*cos(apxy[2]*rpi*x*y/rlength/rlength);
   vvel = phi0[2] + termx + termy + termxy;
   
-  dudx = phix[1]*apx[1]*rpi/rlength*cos(apx[1]*rpi*x/rlength) \ 
+  dudx = phix[1]*apx[1]*rpi/rlength*cos(apx[1]*rpi*x/rlength) \
         + phixy[1]*apxy[1]*rpi*y/rlength/rlength  \
         * cos(apxy[1]*rpi*x*y/rlength/rlength);
   
@@ -863,7 +865,7 @@ void compute_time_step(double* dtmin)
 {
   /* 
   Uses global variable(s): one, two, four, half, fourth
-  Uses global variable(s): vel2ref, rmu, rho, dx, dy, cfl, rkappa, imax, jmax
+  Uses global variable(s): vel2ref, rmu, rho, dx, dy, cfl, rkappa, imax, jmax, uinf
   Uses: u
   To Modify: dt, dtmin
   */
@@ -881,8 +883,24 @@ void compute_time_step(double* dtmin)
 /* !************************************************************** */
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
-
   
+  dtvisc = dx * dy / (4*rmu/rho);
+  
+  for(i=0; i<imax-1; i++)
+  {
+    for(j=0; j<jmax-1; j++)
+    {
+	  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+	  beta2 = max(uvel2, rkappa*vel2ref);
+	  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
+	  lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
+	  lambda_max = max(lambda_x, lambda_y);
+	  dtconv = min(dx, dy) / lambda_max;
+	  dt[i][j] = cfl * min(dtconv, dtvisc);
+	  *dtmin = min(dt[i][j], *dtmin);
+    }
+  }
+
 
 }  
 /**************************************************************************/

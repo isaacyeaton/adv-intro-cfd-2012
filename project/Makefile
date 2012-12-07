@@ -15,6 +15,9 @@ f3: $(FFILE)
 	gfortran -O3 $(FFILE) -o $(BIN)/cavity_f3
 	mv *.mod $(BIN)
 
+c: $(CFILE)
+	clang $(CFILE) -o $(BIN)/cavity_c -lm
+
 f: $(FFILE)
 	#rm $(BIN)/*.mod
 	gfortran $(FFILE) -o $(BIN)/cavity_f
