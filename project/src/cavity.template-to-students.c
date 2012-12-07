@@ -238,7 +238,7 @@ for(i=0; i<imax; i++)
   compute_source_terms();
 
 /*========== Main Loop ==========*/
-  for (n = ninit; n<= nmax; n++)
+  for (n=ninit; n<=nmax; n++)
   {
     /* Calculate time step */  
 	compute_time_step(&dtmin);
@@ -884,7 +884,7 @@ void compute_time_step(double* dtmin)
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
   
-  dtvisc = dx * dy / (4*rmu/rho);
+  dtvisc = dx * dy / (4*rmu*rhoinv);
   
   for(i=0; i<imax-1; i++){
     for(j=0; j<jmax-1; j++){
@@ -917,7 +917,6 @@ void Compute_Artificial_Viscosity()
   double beta2 = -99.9;       /* Beta squared paramete for time derivative preconditioning */
   double lambda_x = -99.9;    /* Max absolute value e-value in (x,t) */
   double lambda_y = -99.9;    /* Max absolute value e-value in (y,t) */
-  double lambda_max = -99.9;  /* Max absolute value eigenvalue */
   double d4pdx4 = -99.9;      /* 4th derivative of pressure w.r.t. x */
   double d4pdy4 = -99.9;      /* 4th derivative of pressure w.r.t. y */
 
@@ -934,15 +933,14 @@ void Compute_Artificial_Viscosity()
 		beta2 = max(uvel2, rkappa*vel2ref);
 		lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
 		lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
-		lambda_max = max(lambda_x, lambda_y);
 		
 		d4pdx4 = u[i+2][j][0] - four*u[i+1][j][0] + six*u[i][j][0] \
-				- u[i-2][j][0] - four*u[i-1][j][0];
+			   - u[i-2][j][0] - four*u[i-1][j][0];
 		d4pdy4 = u[i][j+2][0] - four*u[i][j+1][0] + six*u[i][j][0] \
-			- u[i][j-2][0] - four*u[i][j-2][0];
+			   - u[i][j-2][0] - four*u[i][j-1][0];
 		
-		artviscx[i][j] = -lambda_max * Cx / (beta2 * dx) * d4pdx4;
-		artviscy[i][j] = -lambda_max * Cy / (beta2 * dy) * d4pdy4;
+		artviscx[i][j] = -lambda_x * Cx / (beta2 * dx) * d4pdx4;
+		artviscy[i][j] = -lambda_y * Cy / (beta2 * dy) * d4pdy4;
       }
   }
   
@@ -955,7 +953,7 @@ void Compute_Artificial_Viscosity()
 	  artviscx[imax-2][j] = artviscx[imax-3][j];
   }
   
-  /* Top walls */
+  /* Top/Bottom walls */
   for(i=2; i<imax-3; i++){
 	  artviscy[i][1] = artviscy[i][2];
 	  artviscy[i][jmax-2] = artviscy[i][jmax-3];
@@ -1080,6 +1078,36 @@ void point_Jacobi()
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
+  for(i=2; i<imax-1; i++){
+	  for(j=2; j<jmax; j++){
+		  
+		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		  beta2 = max(uvel2, rkappa*vel2ref);
+		
+		  /* calculate derivatives at current point */
+		  dpdx = (uold[i+1][j][0] - uold[i-1][j][0]) / (two*dx);
+		  dudx = (uold[i+1][j][1] - uold[i-1][j][1]) / (two*dx);
+		  dvdx = (uold[i+1][j][2] - uold[i-1][j][2]) / (two*dx);
+		  
+		  dpdy = (uold[i][j+1][0] - uold[i][j-1][0]) / (two*dy);
+		  dudy = (uold[i][j+1][1] - uold[i][j-1][1]) / (two*dy);
+		  dvdy = (uold[i][j+1][2] - uold[i][j-1][2]) / (two*dy);
+		  
+		  d2udx2 = (uold[i+1][j][1] - 2*uold[i][j][1] + uold[i-1][j][1]) / (dx*dx);
+		  d2vdx2 = (uold[i+1][j][2] - 2*uold[i][j][2] + uold[i-1][j][2]) / (dx*dx);
+		  
+		  d2udy2 = (uold[i][j+1][1] - 2*uold[i][j][1] + uold[i][j-1][1]) / (dy*dy);
+		  d2vdy2 = (uold[i][j+1][2] - 2*uold[i][j][2] + uold[i][j-1][2]) / (dy*dy);
+		  
+		  /* update with new values */
+		  u[i][j][0] = uold[i][j][0] - beta2*dt[i][j] \
+			  * (rho*dudx + rho*dvdy - artviscx[i][j] - artviscy[i][j] - s[i][j][0]);
+		  u[i][j][1] = uold[i][j][1] - dt[i][j]*rhoinv \
+		      * (rho*uold[i][j][1]*dudx + rho*uold[i][j][2]*dudy + dpdx - rmu*d2udx2 - rmu*d2udy2 - s[i][j][1]);
+		  u[i][j][2] = uold[i][j][2] - dt[i][j]*rhoinv \
+			  * (rho*uold[i][j][2]*dvdx + rho*uold[i][j][1]*dvdy + dpdy - rmu*d2vdx2 - rmu*d2vdy2 - s[i][j][2]);
+	  }
+  }
 
 
 }
