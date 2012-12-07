@@ -1164,6 +1164,8 @@ int ninit, double rtime, double dtmin, double *conv)
   int i = 0;                       /* i index (x direction) */
   int j = 0;                       /* j index (y direction) */
   int k = 0;                       /* k index (# of equations) */
+  double restmp = 0.0;             /* temporary variable to store res */
+  
 
   /* Compute iterative residuals to monitor iterative convergence */
   
@@ -1171,7 +1173,20 @@ int ninit, double rtime, double dtmin, double *conv)
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
-
+  for(k=0; k<neq; k++){
+	  for(i=0; i<imax-1; i++){
+		  for(j=0; j<jmax-1; j++){
+			  if (n==4){
+				  resinit[k] = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
+			  }
+			  restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
+			  res[k] += pow(restmp, 2);
+		  }
+	  }
+	  res[k] = sqrt(res[k] / (imax*jmax));
+  }
+  
+  *conv = max(res[0], max(res[1], res[2]));
 
 
   /* Write iterative residuals every 10 iterations */
