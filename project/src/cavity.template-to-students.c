@@ -950,16 +950,27 @@ void Compute_Artificial_Viscosity()
   /* 2nd order difference). */
   
   /* Side walls */
-  for(j=1; j<jmax-1; j++){
+  for(j=2; j<jmax-3; j++){
 	  artviscx[1][j] = artviscx[2][j];
 	  artviscx[imax-2][j] = artviscx[imax-3][j];
   }
   
   /* Top walls */
-  for(i=1; i<imax-1; i++){
+  for(i=2; i<imax-3; i++){
 	  artviscy[i][1] = artviscy[i][2];
 	  artviscy[i][jmax-2] = artviscy[i][jmax-3];
   }
+  
+  /* Corner points */
+  artviscx[1][1] = artviscx[2][2];
+  artviscx[imax-2][1] = artviscx[imax-3][1];
+  artviscx[1][jmax-2] = artviscx[1][jmax-3];
+  artviscx[imax-2][jmax-2] = artviscx[imax-3][jmax-3];
+  
+  artviscy[1][1] = artviscy[2][2];
+  artviscy[imax-2][1] = artviscy[imax-3][1];
+  artviscy[1][jmax-2] = artviscy[1][jmax-3];
+  artviscy[imax-2][jmax-2] = artviscy[imax-3][jmax-3];
   
   
 }
