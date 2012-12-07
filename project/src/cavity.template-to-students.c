@@ -99,12 +99,12 @@
 /***************** This enables running cases on larger meshes. ***************/
 /***Use these variables cautiously as these are globally accessible from all functions.***/
 
-  double u[imax][jmax][neq];         /* Solution vector [p, u, v]^T at each node */
-  double uold[imax][jmax][neq];      /* Previous (old) solution vector */
-  double s[imax][jmax][neq];    /* Source term */
-  double dt[imax][jmax];        /* Local time step at each node */
-  double artviscx[imax][jmax];  /* Artificial viscosity in x-direction */
-  double artviscy[imax][jmax];  /* Artificial viscosity in y-direction */
+  double u[imax][jmax][neq];      /* Solution vector [p, u, v]^T at each node */
+  double uold[imax][jmax][neq];   /* Previous (old) solution vector */
+  double s[imax][jmax][neq];      /* Source term */
+  double dt[imax][jmax];          /* Local time step at each node */
+  double artviscx[imax][jmax];    /* Artificial viscosity in x-direction */
+  double artviscy[imax][jmax];    /* Artificial viscosity in y-direction */
   
 /*------------- Function prototypes ----------------*/
 /*----- All functions are globally accessible ------*/
@@ -865,7 +865,7 @@ void compute_time_step(double* dtmin)
 {
   /* 
   Uses global variable(s): one, two, four, half, fourth
-  Uses global variable(s): vel2ref, rmu, rho, dx, dy, cfl, rkappa, imax, jmax, uinf
+  Uses global variable(s): vel2ref, rmu, rho, dx, dy, cfl, rkappa, imax, jmax
   Uses: u
   To Modify: dt, dtmin
   */
@@ -886,10 +886,8 @@ void compute_time_step(double* dtmin)
   
   dtvisc = dx * dy / (4*rmu/rho);
   
-  for(i=0; i<imax-1; i++)
-  {
-    for(j=0; j<jmax-1; j++)
-    {
+  for(i=0; i<imax-1; i++){
+    for(j=0; j<jmax-1; j++){
 	  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 	  beta2 = max(uvel2, rkappa*vel2ref);
 	  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
@@ -919,6 +917,7 @@ void Compute_Artificial_Viscosity()
   double beta2 = -99.9;       /* Beta squared paramete for time derivative preconditioning */
   double lambda_x = -99.9;    /* Max absolute value e-value in (x,t) */
   double lambda_y = -99.9;    /* Max absolute value e-value in (y,t) */
+  double lambda_max = -99.9;  /* Max absolute value eigenvalue */
   double d4pdx4 = -99.9;      /* 4th derivative of pressure w.r.t. x */
   double d4pdy4 = -99.9;      /* 4th derivative of pressure w.r.t. y */
 
@@ -926,6 +925,42 @@ void Compute_Artificial_Viscosity()
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
+  /* see slide 21, section 7 */
+  
+  /* Interior nodes */
+  for(i=2; i<imax-3; i++){  						/*TODO check if imax-3 and jmax-3...might be 2 */
+      for(j=2; j<jmax-3; j++){
+		uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		beta2 = max(uvel2, rkappa*vel2ref);
+		lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
+		lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
+		lambda_max = max(lambda_x, lambda_y);
+		
+		d4pdx4 = u[i+2][j][0] - four*u[i+1][j][0] + six*u[i][j][0] \
+				- u[i-2][j][0] - four*u[i-1][j][0];
+		d4pdy4 = u[i][j+2][0] - four*u[i][j+1][0] + six*u[i][j][0] \
+			- u[i][j-2][0] - four*u[i][j-2][0];
+		
+		artviscx[i][j] = -lambda_max * Cx / (beta2 * dx) * d4pdx4;
+		artviscy[i][j] = -lambda_max * Cy / (beta2 * dy) * d4pdy4;
+      }
+  }
+  
+  /* Special treatment when one node away from boundary  (can't use */
+  /* 2nd order difference). */
+  
+  /* Side walls */
+  for(j=1; j<jmax-1; j++){
+	  artviscx[1][j] = artviscx[2][j];
+	  artviscx[imax-2][j] = artviscx[imax-3][j];
+  }
+  
+  /* Top walls */
+  for(i=1; i<imax-1; i++){
+	  artviscy[i][1] = artviscy[i][2];
+	  artviscy[i][jmax-2] = artviscy[i][jmax-3];
+  }
+  
   
 }
 /**************************************************************************/
