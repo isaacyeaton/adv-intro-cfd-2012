@@ -1,3 +1,4 @@
+*.dat
 *~
 ./project/bin/*
 *.swp

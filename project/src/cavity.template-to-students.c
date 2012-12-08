@@ -15,8 +15,8 @@
 #endif
 
 /************* Following are fixed parameters for array sizes **************/
-#define imax 513   	/* Number of points in the x-direction (use odd numbers only) */
-#define jmax 513   	/* Number of points in the y-direction (use odd numbers only) */
+#define imax 65   	/* Number of points in the x-direction (use odd numbers only) */
+#define jmax 65   	/* Number of points in the y-direction (use odd numbers only) */
 #define neq 3       /* Number of equation to be solved ( = 3: mass, x-mtm, y-mtm) */
 
 /**********************************************/
@@ -49,12 +49,12 @@
   const int printout = 10;        /* How often to print iterative residuals to screen */
   const int headerout = 200;      /* How often to print header to screen */
   const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
-  const int isgs = 1;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const int isgs = 0;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
 
-  const double cfl  = 0.2;      /* CFL number used to determine time step */
+  const double cfl  = 0.3;      /* CFL number used to determine time step */
   const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
   const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
   const double toler = 1.e-10; 	/* Tolerance for iterative residual convergence */
@@ -926,7 +926,7 @@ void Compute_Artificial_Viscosity()
 		beta2 = max(uvel2, rkappa*vel2ref);
 		lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
 		d4pdx4 = u[i+2][j][0] - four*u[i+1][j][0] + six*u[i][j][0] \
-			   - u[i-2][j][0] - four*u[i-1][j][0];		
+			   + u[i-2][j][0] - four*u[i-1][j][0];		
 		artviscx[i][j] = -lambda_x * Cx / (beta2 * dx) * d4pdx4;
       }
       artviscx[1][j] = artviscx[2][j];            /* left wall */
@@ -939,7 +939,7 @@ void Compute_Artificial_Viscosity()
 		beta2 = max(uvel2, rkappa*vel2ref);
 		lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
 		d4pdy4 = u[i][j+2][0] - four*u[i][j+1][0] + six*u[i][j][0] \
-			   - u[i][j-2][0] - four*u[i][j-1][0];
+			   + u[i][j-2][0] - four*u[i][j-1][0];
 		artviscy[i][j] = -lambda_y * Cy / (beta2 * dy) * d4pdy4;
       }
       artviscy[i][1] = artviscy[i][2];            /* bottom wall */
