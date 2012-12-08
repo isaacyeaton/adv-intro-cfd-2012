@@ -169,7 +169,7 @@ int main()
 //$$$$$$   double artviscx[imax][jmax];  /* Artificial viscosity in x-direction */
 //$$$$$$   double artviscy[imax][jmax];  /* Artificial viscosity in y-direction */
   double res[neq];              /* Iterative residual for each equation */
-  double resinit[neq];          /* Initial iterative residual for each equation (from iteration 1) */
+  double resinit[neq];          /* Initial iterative residual for each equation (from iteration x) */
   double rL1norm[neq];          /* L1 norm of discretization error for each equation */     
   double rL2norm[neq];          /* L2 norm of discretization error for each equation */
   double rLinfnorm[neq];        /* Linfinity norm of discretization error for each equation */
@@ -1165,7 +1165,8 @@ int ninit, double rtime, double dtmin, double *conv)
   int i = 0;                       /* i index (x direction) */
   int j = 0;                       /* j index (y direction) */
   int k = 0;                       /* k index (# of equations) */
-  double restmp = 0.0;             /* temporary variable to store res */
+  double restmp = 0.0;             /* temporary variable to store residuals */
+  double cnt = 0.0;                /* count for number of sums */
   
 
   /* Compute iterative residuals to monitor iterative convergence */
@@ -1174,17 +1175,37 @@ int ninit, double rtime, double dtmin, double *conv)
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
-  for(k=0; k<neq; k++){
-	  for(i=0; i<imax-1; i++){
-		  for(j=0; j<jmax-1; j++){
-			  if (n==4){
-				  resinit[k] = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
+  if (n<4){
+	  printf("%e  %e  %e  %e  %e  %e", resinit[0], resinit[1], resinit[2], res[0], res[1], res[2]);
+  }
+  if (n==4){
+	  for(k=0; k<neq; k++){
+		  restmp = 0.0;
+		  cnt = 0.0;
+		  for(i=1; i<imax-2; i++){
+			  for(j=1; j<jmax-2; j++){
+				  cnt += 1.0;
+				  restmp = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
+				  resinit[k] += pow(restmp, 2);
 			  }
-			  restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
-			  res[k] += pow(restmp, 2);
 		  }
+		  resinit[k] = sqrt(resinit[k] / cnt);
 	  }
-	  res[k] = sqrt(res[k] / (imax*jmax));
+  }
+
+  if (n>=4){
+      for(k=0; k<neq; k++){
+	      restmp = 0.0;
+	      cnt = 0.0;
+	      for(i=1; i<imax-2; i++){
+              for(j=1; j<jmax-2; j++){
+ 	           cnt += 1.0;
+ 	           restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
+ 	           resinit[k] += pow(restmp, 2);
+               }      
+	      }
+	      res[k] = sqrt(res[k] / cnt);
+	  }
   }
   
   *conv = max(res[0], max(res[1], res[2]));
@@ -1201,14 +1222,14 @@ int ninit, double rtime, double dtmin, double *conv)
   /* Write header for iterative residuals every headerout iterations */
   if( ((n%headerout)==0)||(n==ninit) )
   {
-  printf("Iter.   Time (s)      dt (s)      Continuity    x-Momentum    y-Momentum\n"); 
+  printf("Iter.   Time (s)       dt (s)        Continuity   x-Momentum   y-Momentum\n"); 
   }  
 }
 /**************************************************************************/
 void Discretization_Error_Norms(double rL1norm[neq], \
 double rL2norm[neq], double rLinfnorm[neq]) 
 {
-  /* 
+  /* ++){
   Uses global variable(s): zero
   Uses global variable(s): imax, jmax, neq, imms, xmax, xmin, ymax, ymin, rlength
   Uses: u
@@ -1219,19 +1240,32 @@ double rL2norm[neq], double rLinfnorm[neq])
   int j = 0;                       /* j index (y direction) */
   int k = 0;                       /* k index (# of equations) */
 
-  double x = -99.9;       /* Temporary variable for x location */
-  double y = -99.9;       /* Temporary variable for y location */
-  double DE = -99.9;  	/* Discretization error (absolute value) */
+  double x = -99.9;         /* Temporary variable for x location */
+  double y = -99.9;         /* Temporary variable for y location */
+  double DE = -99.9;  	    /* Discretization error (absolute value) */
+  double umms_tmp = -99.9;  /* Temporary variable for real solution */
 
-  if(imms==1)
-  {
+  if(imms==1){
   
 /* !************************************************************** */
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
-
-
-
+	  
+	  for(k=0; k<neq; k++){
+		  rLinfnorm[k] = 0.0;
+		  for(i=1; i<imax-2; i++){
+		      x = (xmax - xmin)*(double)(i)/(double)(imax - 1);
+		      for(j=1; j<jmax-2; j++){
+			      y = (ymax - ymin)*(double)(j)/(double)(jmax - 1);
+			      umms_tmp = umms(x, y, k);
+			      rL1norm[k] += abs(u[i][j][k] - umms_tmp);
+			      rL2norm[k] += pow(u[i][j][k] - umms_tmp, 2);
+			      rLinfnorm[k] = max(rLinfnorm[k], abs(u[i][j][k] - umms_tmp));
+			  }
+		  }
+		  /* normalize by number of points */
+		  rL1norm[k] /= (imax * jmax);
+		  rL2norm[k] = sqrt(rL2norm[k] / (imax * jmax));
+	  }
   }
-  
 }
