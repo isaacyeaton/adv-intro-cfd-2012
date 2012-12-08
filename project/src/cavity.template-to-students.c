@@ -1094,11 +1094,11 @@ void point_Jacobi()
 		  dudy = (uold[i][j+1][1] - uold[i][j-1][1]) / (two*dy);
 		  dvdy = (uold[i][j+1][2] - uold[i][j-1][2]) / (two*dy);
 		  
-		  d2udx2 = (uold[i+1][j][1] - 2*uold[i][j][1] + uold[i-1][j][1]) / (dx*dx);
-		  d2vdx2 = (uold[i+1][j][2] - 2*uold[i][j][2] + uold[i-1][j][2]) / (dx*dx);
+		  d2udx2 = (uold[i+1][j][1] - two*uold[i][j][1] + uold[i-1][j][1]) / (dx*dx);
+		  d2vdx2 = (uold[i+1][j][2] - two*uold[i][j][2] + uold[i-1][j][2]) / (dx*dx);
 		  
-		  d2udy2 = (uold[i][j+1][1] - 2*uold[i][j][1] + uold[i][j-1][1]) / (dy*dy);
-		  d2vdy2 = (uold[i][j+1][2] - 2*uold[i][j][2] + uold[i][j-1][2]) / (dy*dy);
+		  d2udy2 = (uold[i][j+1][1] - two*uold[i][j][1] + uold[i][j-1][1]) / (dy*dy);
+		  d2vdy2 = (uold[i][j+1][2] - two*uold[i][j][2] + uold[i][j-1][2]) / (dy*dy);
 		  
 		  /* update with new values */
 		  u[i][j][0] = uold[i][j][0] - beta2*dt[i][j] \
@@ -1106,7 +1106,7 @@ void point_Jacobi()
 		  u[i][j][1] = uold[i][j][1] - dt[i][j]*rhoinv \
 		      * (rho*uold[i][j][1]*dudx + rho*uold[i][j][2]*dudy + dpdx - rmu*d2udx2 - rmu*d2udy2 - s[i][j][1]);
 		  u[i][j][2] = uold[i][j][2] - dt[i][j]*rhoinv \
-			  * (rho*uold[i][j][2]*dvdx + rho*uold[i][j][1]*dvdy + dpdy - rmu*d2vdx2 - rmu*d2vdy2 - s[i][j][2]);
+			  * (rho*uold[i][j][1]*dvdx + rho*uold[i][j][2]*dvdy + dpdy - rmu*d2vdx2 - rmu*d2vdy2 - s[i][j][2]);
 	  }
   }
 
