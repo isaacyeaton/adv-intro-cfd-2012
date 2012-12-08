@@ -49,7 +49,7 @@
   const int printout = 10;        /* How often to print iterative residuals to screen */
   const int headerout = 200;      /* How often to print header to screen */
   const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
-  const int isgs = 0;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const int isgs = 1;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
@@ -1065,8 +1065,8 @@ void SGS_backward_sweep()
 
   /* Symmetric Gauss-Siedel: Backward Sweep  */
 
-  for(i=imax-1; i>1; i--){
-      for(j=jmax-1; j>1; j--){
+  for(i=imax-2; i>0; i--){
+      for(j=jmax-2; j>0; j--){
 		  
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
