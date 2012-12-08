@@ -889,16 +889,16 @@ void compute_time_step(double* dtmin)
   dtvisc = dx * dy / (4*rmu*rhoinv);
   
   for(i=0; i<imax-1; i++){
-    for(j=0; j<jmax-1; j++){
-	  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
-	  beta2 = max(uvel2, rkappa*vel2ref);
-	  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
-	  lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
-	  lambda_max = max(lambda_x, lambda_y);
-	  dtconv = min(dx, dy) / lambda_max;
-	  dt[i][j] = cfl * min(dtconv, dtvisc);
-	  *dtmin = min(dt[i][j], *dtmin);
-    }
+	  for(j=0; j<jmax-1; j++){
+		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		  beta2 = max(uvel2, rkappa*vel2ref);
+		  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
+		  lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
+		  lambda_max = max(lambda_x, lambda_y);
+		  dtconv = min(dx, dy) / lambda_max;
+		  dt[i][j] = cfl * min(dtconv, dtvisc);
+		  *dtmin = min(dt[i][j], *dtmin);
+	  }
   }
 
 
@@ -929,7 +929,7 @@ void Compute_Artificial_Viscosity()
   /* see slide 21, section 7 */
   
   /* Interior nodes */
-  for(i=2; i<imax-3; i++){  						/*TODO check if imax-3 and jmax-3...might be 2 */
+  for(i=2; i<imax-3; i++){
       for(j=2; j<jmax-3; j++){
 		uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		beta2 = max(uvel2, rkappa*vel2ref);
@@ -946,8 +946,7 @@ void Compute_Artificial_Viscosity()
       }
   }
   
-  /* Special treatment when one node away from boundary  (can't use */
-  /* 2nd order difference). */
+  /* Special treatment when one node away from boundary */
   
   /* Side walls */
   for(j=2; j<jmax-3; j++){
@@ -963,13 +962,13 @@ void Compute_Artificial_Viscosity()
   
   /* Corner points */
   artviscx[1][1] = artviscx[2][2];
-  artviscx[imax-2][1] = artviscx[imax-3][1];
-  artviscx[1][jmax-2] = artviscx[1][jmax-3];
+  artviscx[imax-2][1] = artviscx[imax-3][2];
+  artviscx[1][jmax-2] = artviscx[2][jmax-3];
   artviscx[imax-2][jmax-2] = artviscx[imax-3][jmax-3];
   
   artviscy[1][1] = artviscy[2][2];
-  artviscy[imax-2][1] = artviscy[imax-3][1];
-  artviscy[1][jmax-2] = artviscy[1][jmax-3];
+  artviscy[imax-2][1] = artviscy[imax-3][2];
+  artviscy[1][jmax-2] = artviscy[2][jmax-3];
   artviscy[imax-2][jmax-2] = artviscy[imax-3][jmax-3];
   
   
