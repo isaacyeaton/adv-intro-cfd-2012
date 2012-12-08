@@ -15,8 +15,8 @@
 #endif
 
 /************* Following are fixed parameters for array sizes **************/
-#define imax 65   	/* Number of points in the x-direction (use odd numbers only) */
-#define jmax 65   	/* Number of points in the y-direction (use odd numbers only) */
+#define imax 513   	/* Number of points in the x-direction (use odd numbers only) */
+#define jmax 513   	/* Number of points in the y-direction (use odd numbers only) */
 #define neq 3       /* Number of equation to be solved ( = 3: mass, x-mtm, y-mtm) */
 
 /**********************************************/
@@ -49,12 +49,12 @@
   const int printout = 10;        /* How often to print iterative residuals to screen */
   const int headerout = 200;      /* How often to print header to screen */
   const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
-  const int isgs = 0;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const int isgs = 1;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
 
-  const double cfl  = 0.15;      /* CFL number used to determine time step */
+  const double cfl  = 0.2;      /* CFL number used to determine time step */
   const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
   const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
   const double toler = 1.e-10; 	/* Tolerance for iterative residual convergence */
@@ -368,7 +368,7 @@ void output_file_headers()
   /*               u = [p, u, v]^T               */  
   /* Set up output files (history and solution)  */    
 
-    fp1 = fopen("./history.tec","w");
+    fp1 = fopen("./history.dat","w");
     fprintf(fp1,"TITLE = \"Cavity Iterative Residual History\"\n");
     fprintf(fp1,"variables=\"Iteration\"\"Time(s)\"\"Res1\"\"Res2\"\"Res3\"\n");
 
@@ -1219,40 +1219,61 @@ int ninit, double rtime, double dtmin, double *conv)
 
   /* Compute iterative residuals to monitor iterative convergence */
   
-  /* Calculate normalizing constant for iterative residuals */
-  if (n==4){
-	  for(k=0; k<neq; k++){
-		  restmp = 0.0;
-		  cnt = 0.0;
-		  for(i=1; i<imax-1; i++){
-			  for(j=1; j<jmax-1; j++){
-				  cnt += 1.0;
-				  restmp = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
-				  resinit[k] += pow(restmp, 2);
-			  }
-		  }
-		  resinit[k] = sqrt(resinit[k] / cnt);
-		  printf("%e\n", resinit[k]);
-	  }
-  }
+  ///* Calculate normalizing constant for iterative residuals */
+  //if (n==4){
+	  //for(k=0; k<neq; k++){
+		  //restmp = 0.0;
+		  //cnt = 0.0;
+		  //for(i=1; i<imax-1; i++){
+			  //for(j=1; j<jmax-1; j++){
+				  //cnt += 1.0;
+				  //restmp = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
+				  //resinit[k] += pow(restmp, 2);
+			  //}
+		  //}
+		  //resinit[k] = sqrt(resinit[k] / cnt);
+		  //printf("%e\n", resinit[k]);
+	  //}
+  //}
 
-  /* Only calculate relative iterative residuals if we have a valid normalizing constant */
-  if (n>=4){
-      for(k=0; k<neq; k++){
-	      restmp = 0.0;
-	      cnt = 0.0;
-	      res[k] = 0;
-	      for(i=1; i<imax-1; i++){
-              for(j=1; j<jmax-1; j++){
- 	           cnt += 1.0;
- 	           restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
- 	           res[k] += pow(restmp, 2);
-               }      
-	      }
-	      res[k] = sqrt(res[k] / cnt);
+  ///* Only calculate relative iterative residuals if we have a valid normalizing constant */
+  //if (n>=4){
+      //for(k=0; k<neq; k++){
+	      //restmp = 0.0;
+	      //cnt = 0.0;
+	      //res[k] = 0;
+	      //for(i=1; i<imax-1; i++){
+              //for(j=1; j<jmax-1; j++){
+ 	           //cnt += 1.0;
+ 	           //restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
+ 	           //res[k] += pow(restmp, 2);
+               //}      
+	      //}
+	      //res[k] = sqrt(res[k] / cnt);
+	  //}
+	  //*conv = max(res[0], max(res[1], res[2]));
+  //}
+  
+  
+  for(k=0; k<neq; k++){
+	  cnt = 0.0;
+	  res[k] = 0.0;
+	  restmp = 0.0;
+	  for(i=1; i<imax-1; i++){
+          for(j=1; j<jmax-1; j++){
+ 	          cnt += 1.0;
+ 	          restmp = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
+ 	          res[k] += pow(restmp, 2);
+          }      
 	  }
-	  *conv = max(res[0], max(res[1], res[2]));
+	  res[k] = sqrt(res[k] / cnt) / resinit[k];
+	  
+	  if (n==4){
+		  /* resinit[k] is 1.0 initially, so we can divide as in above */
+		  resinit[k] = res[k];
+	  }
   }
+  *conv = max(res[0], max(res[1], res[2]));
 
 
   /* Write iterative residuals every printout iterations */

@@ -7,6 +7,11 @@ CPPFILE = $(SRC)/DrivenCavity.template-to-students.cpp
 
 clean: 
 	rm $(BIN)/*
+
+cleantxt:
+	rm *.dat
+	rm *.out
+	rm *.tec
 	
 c3: $(CFILE)
 	clang -O3 $(CFILE) -o $(BIN)/cavity_c3 -lm
