@@ -54,7 +54,7 @@
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
 
-  const double cfl  = 0.5;      /* CFL number used to determine time step */
+  const double cfl  = 0.15;      /* CFL number used to determine time step */
   const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
   const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
   const double toler = 1.e-10; 	/* Tolerance for iterative residual convergence */
@@ -881,15 +881,11 @@ void compute_time_step(double* dtmin)
   double lambda_y = -99.9;    /* Max absolute value eigenvalue in (y,t) */
   double lambda_max = -99.9;  /* Max absolute value eigenvalue (used in convective time step computation) */
   double dtconv = -99.9;      /* Local convective time step restriction */
-
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
   
   dtvisc = dx * dy / (4*rmu*rhoinv);
   
-  for(i=1; i<imax-2; i++){
-	  for(j=1; j<jmax-2; j++){
+  for(i=1; i<imax-1; i++){
+	  for(j=1; j<jmax-1; j++){
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
 		  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
@@ -922,54 +918,58 @@ void Compute_Artificial_Viscosity()
   double d4pdx4 = -99.9;      /* 4th derivative of pressure w.r.t. x */
   double d4pdy4 = -99.9;      /* 4th derivative of pressure w.r.t. y */
 
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
-
   /* see slide 21, section 7 */
   
-  /* Interior nodes */
-  for(i=2; i<imax-3; i++){
-      for(j=2; j<jmax-3; j++){
+  for(j=1; j<jmax-1; j++){
+      for(i=2; i<imax-2; i++){
 		uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		beta2 = max(uvel2, rkappa*vel2ref);
 		lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
-		lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
-		
 		d4pdx4 = u[i+2][j][0] - four*u[i+1][j][0] + six*u[i][j][0] \
-			   - u[i-2][j][0] - four*u[i-1][j][0];
+			   - u[i-2][j][0] - four*u[i-1][j][0];		
+		artviscx[i][j] = -lambda_x * Cx / (beta2 * dx) * d4pdx4;
+      }
+      artviscx[1][j] = artviscx[2][j];            /* left wall */
+      artviscx[imax-2][j] = artviscx[imax-3][j];  /* right wall */
+  }
+  
+  for(i=1; i<imax-1; i++){
+      for(j=2; j<jmax-2; j++){
+		uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		beta2 = max(uvel2, rkappa*vel2ref);
+		lambda_y = half * (abs(u[i][j][2]) + sqrt(pow(u[i][j][2], 2) + four*beta2));
 		d4pdy4 = u[i][j+2][0] - four*u[i][j+1][0] + six*u[i][j][0] \
 			   - u[i][j-2][0] - four*u[i][j-1][0];
-		
-		artviscx[i][j] = -lambda_x * Cx / (beta2 * dx) * d4pdx4;
 		artviscy[i][j] = -lambda_y * Cy / (beta2 * dy) * d4pdy4;
       }
+      artviscy[i][1] = artviscy[i][2];            /* bottom wall */
+      artviscy[i][jmax-2] = artviscy[i][jmax-3];  /* top wall */
   }
   
-  /* Special treatment when one node away from boundary */
+  ///* Special treatment when one node away from boundary */
   
-  /* Side walls */
-  for(j=2; j<jmax-3; j++){
-	  artviscx[1][j] = artviscx[2][j];
-	  artviscx[imax-2][j] = artviscx[imax-3][j];
-  }
+  ///* Side walls */
+  //for(j=2; j<jmax-3; j++){
+	  //artviscx[1][j] = artviscx[2][j];
+	  //artviscx[imax-2][j] = artviscx[imax-3][j];
+  //}
   
-  /* Top/Bottom walls */
-  for(i=2; i<imax-3; i++){
-	  artviscy[i][1] = artviscy[i][2];
-	  artviscy[i][jmax-2] = artviscy[i][jmax-3];
-  }
+  ///* Top/Bottom walls */
+  //for(i=2; i<imax-3; i++){
+	  //artviscy[i][1] = artviscy[i][2];
+	  //artviscy[i][jmax-2] = artviscy[i][jmax-3];
+  //}
   
-  /* Corner points */
-  artviscx[1][1] = artviscx[2][2];
-  artviscx[imax-2][1] = artviscx[imax-3][2];
-  artviscx[1][jmax-2] = artviscx[2][jmax-3];
-  artviscx[imax-2][jmax-2] = artviscx[imax-3][jmax-3];
+  ///* Corner points */
+  //artviscx[1][1] = artviscx[2][2];
+  //artviscx[imax-2][1] = artviscx[imax-3][2];
+  //artviscx[1][jmax-2] = artviscx[2][jmax-3];
+  //artviscx[imax-2][jmax-2] = artviscx[imax-3][jmax-3];
   
-  artviscy[1][1] = artviscy[2][2];
-  artviscy[imax-2][1] = artviscy[imax-3][2];
-  artviscy[1][jmax-2] = artviscy[2][jmax-3];
-  artviscy[imax-2][jmax-2] = artviscy[imax-3][jmax-3];
+  //artviscy[1][1] = artviscy[2][2];
+  //artviscy[imax-2][1] = artviscy[imax-3][2];
+  //artviscy[1][jmax-2] = artviscy[2][jmax-3];
+  //artviscy[imax-2][jmax-2] = artviscy[imax-3][jmax-3];
   
   
 }
@@ -1001,13 +1001,8 @@ void SGS_forward_sweep()
 
   /* Symmetric Gauss-Siedel: Forward Sweep */
 
-  
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
-
-  for(i=1; i<imax-2; i++){
-      for(j=1; j<jmax-2; j++){
+  for(i=1; i<imax-1; i++){
+      for(j=1; j<jmax-1; j++){
 		  
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
@@ -1069,13 +1064,9 @@ void SGS_backward_sweep()
   double uvel2 = -99.9;       /* Velocity squared */
 
   /* Symmetric Gauss-Siedel: Backward Sweep  */
-  
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
 
-  for(i=imax-2; i>1; i--){
-      for(j=jmax-2; j>1; j--){
+  for(i=imax-1; i>1; i--){
+      for(j=jmax-1; j>1; j--){
 		  
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
@@ -1135,13 +1126,9 @@ void point_Jacobi()
   double uvel2 = -99.9;       /* Velocity squared */
 
   /* Point Jacobi method */
-  
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
 
-  for(i=1; i<imax-2; i++){
-	  for(j=1; j<jmax-2; j++){
+  for(i=1; i<imax-1; i++){
+	  for(j=1; j<jmax-1; j++){
 		  
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
@@ -1232,17 +1219,13 @@ int ninit, double rtime, double dtmin, double *conv)
 
   /* Compute iterative residuals to monitor iterative convergence */
   
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
-
-  /* Calculate normalizing factor for iterative residuals */
+  /* Calculate normalizing constant for iterative residuals */
   if (n==4){
 	  for(k=0; k<neq; k++){
 		  restmp = 0.0;
 		  cnt = 0.0;
-		  for(i=1; i<imax-2; i++){
-			  for(j=1; j<jmax-2; j++){
+		  for(i=1; i<imax-1; i++){
+			  for(j=1; j<jmax-1; j++){
 				  cnt += 1.0;
 				  restmp = -(u[i][j][k] - uold[i][j][k]) / dt[i][j];
 				  resinit[k] += pow(restmp, 2);
@@ -1253,14 +1236,14 @@ int ninit, double rtime, double dtmin, double *conv)
 	  }
   }
 
-  /* Only calculate relative iterative residuals if we have a valid normalizing factor */
+  /* Only calculate relative iterative residuals if we have a valid normalizing constant */
   if (n>=4){
       for(k=0; k<neq; k++){
 	      restmp = 0.0;
 	      cnt = 0.0;
 	      res[k] = 0;
-	      for(i=1; i<imax-2; i++){
-              for(j=1; j<jmax-2; j++){
+	      for(i=1; i<imax-1; i++){
+              for(j=1; j<jmax-1; j++){
  	           cnt += 1.0;
  	           restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
  	           res[k] += pow(restmp, 2);
@@ -1304,30 +1287,23 @@ double rL2norm[neq], double rLinfnorm[neq])
   double x = -99.9;         /* Temporary variable for x location */
   double y = -99.9;         /* Temporary variable for y location */
   double DE = -99.9;  	    /* Discretization error (absolute value) */
-  double umms_tmp = -99.9;  /* Temporary variable for real solution */
   double cnt = 0.0;
 
-  if(imms==1){
-  
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
-	  
+  if(imms==1){	  
 	  for(k=0; k<neq; k++){
 		  rLinfnorm[k] = 0.0;
 		  cnt = 0.0;
-		  for(i=1; i<imax-2; i++){
+		  for(i=1; i<imax-1; i++){
 		      x = (xmax - xmin)*(double)(i)/(double)(imax - 1);
-		      for(j=1; j<jmax-2; j++){
+		      for(j=1; j<jmax-1; j++){
 				  cnt += 1.0;
 			      y = (ymax - ymin)*(double)(j)/(double)(jmax - 1);
-			      umms_tmp = umms(x, y, k);
-			      rL1norm[k] += abs(u[i][j][k] - umms_tmp);
-			      rL2norm[k] += pow(u[i][j][k] - umms_tmp, 2);
-			      rLinfnorm[k] = max(rLinfnorm[k], abs(u[i][j][k] - umms_tmp));
+			      DE = abs(u[i][j][k] - umms(x, y, k));
+			      rL1norm[k] += DE;
+			      rL2norm[k] += pow(DE, 2);
+			      rLinfnorm[k] = max(rLinfnorm[k], DE);
 			  }
 		  }
-		  /* normalize by number of points */
 		  rL1norm[k] /= cnt;
 		  rL2norm[k] = sqrt(rL2norm[k] / cnt);
 	  }
