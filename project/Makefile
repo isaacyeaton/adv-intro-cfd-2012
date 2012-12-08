@@ -9,7 +9,7 @@ clean:
 	rm $(BIN)/*
 	
 c3: $(CFILE)
-	gcc -O3 $(CFILE) -o $(BIN)/cavity_c3 -lm
+	clang -O3 $(CFILE) -o $(BIN)/cavity_c3 -lm
 
 f3: $(FFILE)
 	#rm $(BIN)/*.mod
@@ -27,3 +27,6 @@ f: $(FFILE)
 
 run: c
 	$(CBIN)
+
+run3 :c3
+	$(BIN)/cavity_c3

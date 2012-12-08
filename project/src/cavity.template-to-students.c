@@ -15,8 +15,8 @@
 #endif
 
 /************* Following are fixed parameters for array sizes **************/
-#define imax 9   	/* Number of points in the x-direction (use odd numbers only) */
-#define jmax 9   	/* Number of points in the y-direction (use odd numbers only) */
+#define imax 65   	/* Number of points in the x-direction (use odd numbers only) */
+#define jmax 65   	/* Number of points in the y-direction (use odd numbers only) */
 #define neq 3       /* Number of equation to be solved ( = 3: mass, x-mtm, y-mtm) */
 
 /**********************************************/
@@ -49,7 +49,7 @@
   const int printout = 10;        /* How often to print iterative residuals to screen */
   const int headerout = 200;      /* How often to print header to screen */
   const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
-  const int isgs = 1;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const int isgs = 0;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
@@ -307,7 +307,7 @@ for(i=0; i<imax; i++)
     check_iterative_convergence(n, res, resinit, ninit, \
     rtime, dtmin, &conv);
 
-    if(conv<toler) 
+    if(conv<toler && n>200)  /* added condition to make sure we are not stopping prematurely */
     {
     fprintf(fp1, "%d %e %e %e %e\n",n, rtime, res[0], res[1], res[2]);
     goto converged;
@@ -888,8 +888,8 @@ void compute_time_step(double* dtmin)
   
   dtvisc = dx * dy / (4*rmu*rhoinv);
   
-  for(i=0; i<imax-1; i++){
-	  for(j=0; j<jmax-1; j++){
+  for(i=1; i<imax-2; i++){
+	  for(j=1; j<jmax-2; j++){
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
 		  lambda_x = half * (abs(u[i][j][1]) + sqrt(pow(u[i][j][1], 2) + four*beta2));
@@ -1006,6 +1006,37 @@ void SGS_forward_sweep()
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
+  for(i=1; i<imax-2; i++){
+      for(j=1; j<jmax-2; j++){
+		  
+		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		  beta2 = max(uvel2, rkappa*vel2ref);
+		
+		  /* calculate derivatives at current time step */
+		  dpdx = (u[i+1][j][0] - u[i-1][j][0]) / (two*dx);
+		  dudx = (u[i+1][j][1] - u[i-1][j][1]) / (two*dx);
+		  dvdx = (u[i+1][j][2] - u[i-1][j][2]) / (two*dx);
+		  
+		  dpdy = (u[i][j+1][0] - u[i][j-1][0]) / (two*dy);
+		  dudy = (u[i][j+1][1] - u[i][j-1][1]) / (two*dy);
+		  dvdy = (u[i][j+1][2] - u[i][j-1][2]) / (two*dy);
+		  
+		  d2udx2 = (u[i+1][j][1] - two*u[i][j][1] + uold[i-1][j][1]) / (dx*dx);
+		  d2vdx2 = (u[i+1][j][2] - two*u[i][j][2] + uold[i-1][j][2]) / (dx*dx);
+		  
+		  d2udy2 = (u[i][j+1][1] - two*u[i][j][1] + uold[i][j-1][1]) / (dy*dy);
+		  d2vdy2 = (u[i][j+1][2] - two*u[i][j][2] + uold[i][j-1][2]) / (dy*dy);
+		  
+		  /* update with new values */
+		  u[i][j][0] = u[i][j][0] - beta2*dt[i][j] \
+			  * (rho*dudx + rho*dvdy - artviscx[i][j] - artviscy[i][j] - s[i][j][0]);
+		  u[i][j][1] = u[i][j][1] - dt[i][j]*rhoinv \
+		      * (rho*u[i][j][1]*dudx + rho*u[i][j][2]*dudy + dpdx - rmu*d2udx2 - rmu*d2udy2 - s[i][j][1]);
+		  u[i][j][2] = u[i][j][2] - dt[i][j]*rhoinv \
+			  * (rho*u[i][j][1]*dvdx + rho*u[i][j][2]*dvdy + dpdy - rmu*d2vdx2 - rmu*d2vdy2 - s[i][j][2]);
+	  }
+  }
+
 
 
 
@@ -1043,6 +1074,36 @@ void SGS_backward_sweep()
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
+  for(i=imax-2; i>1; i--){
+      for(j=jmax-2; j>1; j--){
+		  
+		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
+		  beta2 = max(uvel2, rkappa*vel2ref);
+		
+		  /* calculate derivatives at current time step */
+		  dpdx = (u[i+1][j][0] - u[i-1][j][0]) / (two*dx);
+		  dudx = (u[i+1][j][1] - u[i-1][j][1]) / (two*dx);
+		  dvdx = (u[i+1][j][2] - u[i-1][j][2]) / (two*dx);
+		  
+		  dpdy = (u[i][j+1][0] - u[i][j-1][0]) / (two*dy);
+		  dudy = (u[i][j+1][1] - u[i][j-1][1]) / (two*dy);
+		  dvdy = (u[i][j+1][2] - u[i][j-1][2]) / (two*dy);
+		  
+		  d2udx2 = (u[i+1][j][1] - two*u[i][j][1] + uold[i-1][j][1]) / (dx*dx);
+		  d2vdx2 = (u[i+1][j][2] - two*u[i][j][2] + uold[i-1][j][2]) / (dx*dx);
+		  
+		  d2udy2 = (u[i][j+1][1] - two*u[i][j][1] + uold[i][j-1][1]) / (dy*dy);
+		  d2vdy2 = (u[i][j+1][2] - two*u[i][j][2] + uold[i][j-1][2]) / (dy*dy);
+		  
+		  /* update with new values */
+		  u[i][j][0] = u[i][j][0] - beta2*dt[i][j] \
+			  * (rho*dudx + rho*dvdy - artviscx[i][j] - artviscy[i][j] - s[i][j][0]);
+		  u[i][j][1] = u[i][j][1] - dt[i][j]*rhoinv \
+		      * (rho*u[i][j][1]*dudx + rho*u[i][j][2]*dudy + dpdx - rmu*d2udx2 - rmu*d2udy2 - s[i][j][1]);
+		  u[i][j][2] = u[i][j][2] - dt[i][j]*rhoinv \
+			  * (rho*u[i][j][1]*dvdx + rho*u[i][j][2]*dvdy + dpdy - rmu*d2vdx2 - rmu*d2vdy2 - s[i][j][2]);
+	  }
+  }
 
 
 }
@@ -1079,13 +1140,13 @@ void point_Jacobi()
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
-  for(i=2; i<imax-1; i++){
-	  for(j=2; j<jmax; j++){
+  for(i=1; i<imax-2; i++){
+	  for(j=1; j<jmax-2; j++){
 		  
 		  uvel2 = pow(u[i][j][1], 2) + pow(u[i][j][2], 2);
 		  beta2 = max(uvel2, rkappa*vel2ref);
 		
-		  /* calculate derivatives at current point */
+		  /* calculate derivatives at previous time step */
 		  dpdx = (uold[i+1][j][0] - uold[i-1][j][0]) / (two*dx);
 		  dudx = (uold[i+1][j][1] - uold[i-1][j][1]) / (two*dx);
 		  dvdx = (uold[i+1][j][2] - uold[i-1][j][2]) / (two*dx);
@@ -1175,9 +1236,7 @@ int ninit, double rtime, double dtmin, double *conv)
 /* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
 /* !************************************************************** */
 
-  if (n<4){
-	  printf("%e  %e  %e  %e  %e  %e", resinit[0], resinit[1], resinit[2], res[0], res[1], res[2]);
-  }
+  /* Calculate normalizing factor for iterative residuals */
   if (n==4){
 	  for(k=0; k<neq; k++){
 		  restmp = 0.0;
@@ -1190,25 +1249,27 @@ int ninit, double rtime, double dtmin, double *conv)
 			  }
 		  }
 		  resinit[k] = sqrt(resinit[k] / cnt);
+		  printf("%e\n", resinit[k]);
 	  }
   }
 
+  /* Only calculate relative iterative residuals if we have a valid normalizing factor */
   if (n>=4){
       for(k=0; k<neq; k++){
 	      restmp = 0.0;
 	      cnt = 0.0;
+	      res[k] = 0;
 	      for(i=1; i<imax-2; i++){
               for(j=1; j<jmax-2; j++){
  	           cnt += 1.0;
  	           restmp = -((u[i][j][k] - uold[i][j][k]) / dt[i][j]) / resinit[k];
- 	           resinit[k] += pow(restmp, 2);
+ 	           res[k] += pow(restmp, 2);
                }      
 	      }
 	      res[k] = sqrt(res[k] / cnt);
 	  }
+	  *conv = max(res[0], max(res[1], res[2]));
   }
-  
-  *conv = max(res[0], max(res[1], res[2]));
 
 
   /* Write iterative residuals every printout iterations */
@@ -1244,6 +1305,7 @@ double rL2norm[neq], double rLinfnorm[neq])
   double y = -99.9;         /* Temporary variable for y location */
   double DE = -99.9;  	    /* Discretization error (absolute value) */
   double umms_tmp = -99.9;  /* Temporary variable for real solution */
+  double cnt = 0.0;
 
   if(imms==1){
   
@@ -1253,9 +1315,11 @@ double rL2norm[neq], double rLinfnorm[neq])
 	  
 	  for(k=0; k<neq; k++){
 		  rLinfnorm[k] = 0.0;
+		  cnt = 0.0;
 		  for(i=1; i<imax-2; i++){
 		      x = (xmax - xmin)*(double)(i)/(double)(imax - 1);
 		      for(j=1; j<jmax-2; j++){
+				  cnt += 1.0;
 			      y = (ymax - ymin)*(double)(j)/(double)(jmax - 1);
 			      umms_tmp = umms(x, y, k);
 			      rL1norm[k] += abs(u[i][j][k] - umms_tmp);
@@ -1264,8 +1328,8 @@ double rL2norm[neq], double rLinfnorm[neq])
 			  }
 		  }
 		  /* normalize by number of points */
-		  rL1norm[k] /= (imax * jmax);
-		  rL2norm[k] = sqrt(rL2norm[k] / (imax * jmax));
+		  rL1norm[k] /= cnt;
+		  rL2norm[k] = sqrt(rL2norm[k] / cnt);
 	  }
   }
 }
