@@ -46,6 +46,8 @@
 
   const int nmax = 500000;        /* Maximum number of iterations */
   const int iterout = 5000;       /* Number of time steps between solution output */
+  const int printout = 10;        /* How often to print iterative residuals to screen */
+  const int headerout = 200;      /* How often to print header to screen */
   const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
   const int isgs = 1;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
@@ -201,7 +203,7 @@ for (i=0; i<imax; i++)
 }
 
 /* Debug output: Uncomment and modify if debugging */
-//$$$$$$ fp6 = fopen("./Debug.dat","w");
+//$$$$$$ fp6 = fopen("./Debug.tec","w");
 //$$$$$$ fprintf(fp6,"TITLE = \"Debug Data Data\"\n");
 //$$$$$$ fprintf(fp6,"variables=\"x(m)\"\"y(m)\"\"visc-x\"\"visc-y\"\n");
 //$$$$$$ fprintf(fp6, "zone T=\"n=%d\"\n",n);
@@ -366,11 +368,11 @@ void output_file_headers()
   /*               u = [p, u, v]^T               */  
   /* Set up output files (history and solution)  */    
 
-    fp1 = fopen("./history.dat","w");
+    fp1 = fopen("./history.tec","w");
     fprintf(fp1,"TITLE = \"Cavity Iterative Residual History\"\n");
     fprintf(fp1,"variables=\"Iteration\"\"Time(s)\"\"Res1\"\"Res2\"\"Res3\"\n");
 
-    fp2 = fopen("./cavity.dat","w");
+    fp2 = fopen("./cavity.tec","w");
     fprintf(fp2,"TITLE = \"Cavity Field Data\"\n");
     if(imms==1)
     {
@@ -1189,18 +1191,18 @@ int ninit, double rtime, double dtmin, double *conv)
   *conv = max(res[0], max(res[1], res[2]));
 
 
-  /* Write iterative residuals every 10 iterations */
-  if( ((n%10)==0)||(n==ninit) )
+  /* Write iterative residuals every printout iterations */
+  if( ((n%printout)==0)||(n==ninit) )
   {
     fprintf(fp1, "%d %e %e %e %e\n",n, rtime, res[0], res[1], res[2] );
     printf("%d   %e   %e   %e   %e   %e\n",n, rtime, dtmin, res[0], res[1], res[2] );    
     /* Maybe a need to format this better */    
   }
       
-  /* Write header for iterative residuals every 200 iterations */
-  if( ((n%200)==0)||(n==ninit) )
+  /* Write header for iterative residuals every headerout iterations */
+  if( ((n%headerout)==0)||(n==ninit) )
   {
-  printf("Iter. Time (s)   dt (s)      Continuity    x-Momentum    y-Momentum\n"); 
+  printf("Iter.   Time (s)      dt (s)      Continuity    x-Momentum    y-Momentum\n"); 
   }  
 }
 /**************************************************************************/
