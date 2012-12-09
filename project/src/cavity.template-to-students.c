@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef max
 	#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -15,9 +16,22 @@
 #endif
 
 /************* Following are fixed parameters for array sizes **************/
-#define imax 129   	/* Number of points in the x-direction (use odd numbers only) */
-#define jmax 129   	/* Number of points in the y-direction (use odd numbers only) */
+#define imax 17   	/* Number of points in the x-direction (use odd numbers only) */
+#define jmax 17   	/* Number of points in the y-direction (use odd numbers only) */
 #define neq 3       /* Number of equation to be solved ( = 3: mass, x-mtm, y-mtm) */
+
+/*--------- User to change ---------------*/
+  const char basename[100] = "_SGS_17x17_Re=100_cfl=0.1.tec";
+  const int imms = 0;           /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
+  const int isgs = 1;           /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const double Re = 100.0;      /* Reynolds number = rho*Uinf*L/rmu */
+  const double cfl  = 0.1;      /* CFL number used to determine time step */
+  const double rkappa = 0.1;   	/* Time derivative preconditioning constant */
+  const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
+  const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
+  
+  const char fp1name[100] = "./history";
+  const char fp2name[100] = "./cavity";
 
 /**********************************************/
 /****** All Global variables declared here. ***/
@@ -42,24 +56,20 @@
   const double four   = 4.0;
   const double six    = 6.0;
   
+
+  
 /*--------- User sets inputs here  --------*/
 
   const int nmax = 500000;        /* Maximum number of iterations */
   const int iterout = 5000;       /* Number of time steps between solution output */
-  const int printout = 10;        /* How often to print iterative residuals to screen */
-  const int headerout = 200;      /* How often to print header to screen */
-  const int imms = 1;             /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
-  const int isgs = 0;             /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
+  const int printout = 100;        /* How often to print iterative residuals to screen */
+  const int headerout = 10000;      /* How often to print header to screen */
+
   const int irstr = 0;            /* Restart flag: = 1 for restart (file 'restart.in', = 0 for initial run */
   const int ipgorder = 0;         /* Order of pressure gradient: 0 = 2nd, 1 = 3rd (not needed) */
   const int lim = 0;              /* variable to be used as the limiter sensor (= 0 for pressure) */
 
-  const double cfl  = 0.3;      /* CFL number used to determine time step */
-  const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
-  const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
   const double toler = 1.e-10; 	/* Tolerance for iterative residual convergence */
-  const double rkappa = 0.1;   	/* Time derivative preconditioning constant */
-  const double Re = 100.0;      /* Reynolds number = rho*Uinf*L/rmu */
   const double pinf = 0.801333844662; /* Initial pressure (N/m^2) -> from MMS value at cavity center */
   const double uinf = 1.0;      /* Lid velocity (m/s) */
   const double rho = 1.0;       /* Density (kg/m^3) */
@@ -327,7 +337,7 @@ for(i=0; i<imax; i++)
     
 converged:  /* go here once solution is converged */
 
-  printf("Solution converged in %d iterations!!!", n);
+  printf("Solution converged in %d iterations!!!\n\n", n);
 
 notconverged:
 
@@ -367,12 +377,23 @@ void output_file_headers()
   /* Note: The vector of primitive variables is: */
   /*               u = [p, u, v]^T               */  
   /* Set up output files (history and solution)  */    
-
-    fp1 = fopen("./history.dat","w");
+    
+    /* do some hand waving to get a file name correct */
+    char fp1file[100] = "";
+    char fp2file[100] = "";
+    
+    strcpy(fp1file, fp1name);
+    strcpy(fp2file, fp2name);
+    strcat(fp1file, basename);
+    strcat(fp2file, basename);
+	
+	fp1 = fopen(fp1file, "w");
+    //fp1 = fopen("./history.dat","w");
     fprintf(fp1,"TITLE = \"Cavity Iterative Residual History\"\n");
     fprintf(fp1,"variables=\"Iteration\"\"Time(s)\"\"Res1\"\"Res2\"\"Res3\"\n");
 
-    fp2 = fopen("./cavity.tec","w");
+	fp2 = fopen(fp2file, "w");
+    //fp2 = fopen("./cavity.tec","w");
     fprintf(fp2,"TITLE = \"Cavity Field Data\"\n");
     if(imms==1)
     {
@@ -502,14 +523,36 @@ void bndry()
   int i = 0;                       /* i index (x direction) */
   int j = 0;                       /* j index (y direction) */
 
-  /* This applies the cavity boundary conditions */
+  /* This applies the cavity boundary conditions 
+   * Note that we do the top and bottom first because the corner
+   * points must be zero. 
+  */
+  
+  /* Top and bottom walls */
+  for(i=0; i<imax; i++){
+	  /* top wall */
+	  u[i][0][0] = two*u[i][1][0] - u[i][2][0];
+	  u[i][0][1] = zero;
+	  u[i][0][2] = zero;
+	  
+	  /* bottom wall */
+	  u[i][jmax-1][0] = two*u[i][jmax-2][0] - u[i][jmax-3][0];
+	  u[i][jmax-1][1] = uinf;
+	  u[i][jmax-1][2] = zero;
+  }
 
-/* !************************************************************** */
-/* !************ADD CODING HERE FOR INTRO CFD STUDENTS************ */
-/* !************************************************************** */
-
-
- 
+  /* Left and right walls */
+  for(j=0; j<jmax; j++){
+	  /* left wall */
+	  u[0][j][0] = two*u[1][j][0] - u[2][j][0];
+	  u[0][j][1] = zero;
+	  u[0][j][2] = zero;
+	  
+	  /* right wall */
+	  u[imax-1][j][0] = two*u[imax-2][j][0] - u[imax-3][j][0];
+	  u[imax-1][j][1] = zero;
+	  u[imax-1][j][2] = zero;
+  }
 }
 /**************************************************************************/
 void bndrymms()
