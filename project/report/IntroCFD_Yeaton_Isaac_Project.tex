@@ -1,0 +1,624 @@
+% Isaac J. Yeaton
+% Dec 12, 2012
+%
+% Advanced Intro to CFD, Final project report
+
+% top matter
+\documentclass[10pt, letterpaper]{article}
+
+% load packages
+%\usepackage{showkeys}   % show labels in document
+%\usepackage{paralist}   % in-paragraph lists
+\usepackage{graphicx}   % for including figures
+\usepackage{epstopdf}   % enable .eps images when using pdflatex
+\usepackage{hyperref}   % including links within document
+\usepackage{amsmath}    % more featurefull math tools
+\usepackage{amssymb}    % even more math symbols
+\usepackage{geometry}   % specify page dimensions
+\usepackage{siunitx}    % for including units
+\usepackage{listings}   % formatted code
+\usepackage{appendix}   % actual appendix environment
+\usepackage{varioref}   % smart page, figure, table, and equation referencing
+\usepackage{wrapfig}    % wrap figures/tables in text (i.e., Di Vinci style)
+\usepackage{fancyvrb}   % extended verbatim environments
+\usepackage{nomencl}    % inserting nomenclature
+\usepackage{pdfpages}   % including external pdfs
+%\usepackage{subfigure}  % adding subfigures
+\usepackage{longtable}  % multipage tables
+\usepackage{setspace}   % change spacing for document
+\usepackage[all]{hypcap}        % make links point to top of image
+\usepackage{threeparttable}     % tables with footnotes
+%\usepackage[parfill]{parskip}   % modify paragraph breaks and spacing
+\usepackage[version=3]{mhchem}  % chemical equations and notation
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+% modify the spacing
+\frenchspacing   % modify the spacing between words
+%\onehalfspacing  % put more space between lines
+
+% modify some packages
+%\geometry{margin=1in}
+\geometry{letterpaper}
+\hypersetup{colorlinks=true, linkcolor=black,
+            citecolor=black, urlcolor=black}
+
+% include code
+\lstset{language=Python, basicstyle=\footnotesize, frame=single,
+        numbers=left}
+
+% bibliography
+\usepackage[square, numbers, sort&compress, comma]{natbib}
+\bibliographystyle{plainnat}
+
+%% -------------------------------------------------------------------------
+
+% user defined commands
+\newcommand{\p}{\partial}
+\newcommand{\fig}[1]{figure~\ref{#1}}
+\newcommand{\sect}[1]{section~\ref{#1}}
+\newcommand{\eqn}[1]{equation~\eqref{#1}}
+\newcommand{\tab}[1]{table~\ref{#1}}
+\newcommand{\comment}[1]{}  % easy way to block out text
+%http://tex.stackexchange.com/questions/44545/newcommand-gives-errors-in-math-mode-with-or-without-arguments
+\newcommand{\pf}[3][]{% \deriv[<order>]{<func>}{<var>}
+  \ensuremath{\frac{\partial^{#1} {#2}}{\partial {#3}^{#1}}}}
+\newcommand{\mesh}[1]{${#1} \times {#1}$}
+%\newcommand{\pf}[2]{$\frac{\partial {#1}}{\partial {#2}}$}
+%\newcommnad{\pfn}[3]{$\frac{\partial^{#3} {#1}}{\partial {#2}^{#3}}$}
+%\newcommnad{\lmaxx}[1]{$|\lambda_x|_{\mathrm{max}}$}
+%\newcommnad{\lmaxy}[1]{$|\lambda_y|_{\mathrm{max}}$}
+%\newcommnad{\C4}{$C^{(4)}$}
+%\newcommand{\b2}{$\beta^2$}
+
+% shortcuts
+
+
+%% -------------------------------------------------------------------------
+
+% headings to be displayed
+\pagestyle{myheadings}
+\markright{I.~Yeaton -- Numerical Study of Incompressible Lid-Driven Cavity Flow}
+
+% document parameters
+\title{Numerical Study of Incompressible Lid-Driven Cavity Flow}
+\author{Isaac J.~Yeaton}
+\date{December 12, 2012}
+
+%% -------------------------------------------------------------------------
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+%% -------------------------------------------------------------------------
+
+\begin{abstract}
+	Two-dimensional, lid-driven cavity flow was solved using CFD code for 
+	Reynolds numbers
+	of 100, 500, and 1000 using the 2D~incompressible Navier-Stokes equations
+	with time derivative preconditioning (temperature and viscosity were assumed
+	constant).  The code was checked with the method of manufactured solutions
+	for both a point Jacobi and symmetric Gauss-Seidel numerical schemes.  This
+	was done at a Reynolds number of 10 and used to show the observed order of
+	accuracy approaches second-order with mesh refinement.  Symmetric meshes
+	of \mesh{65}, \mesh{129}, \mesh{257}, and \mesh{513} nodes were run. 
+	Additionally, textsc{OpenFOAM} was used to check the lid driven cavity case
+	and the comparison shows very similar results, with minor discrepancies
+	for the pressure.  A study of mesh size, $\kappa$, and 
+	$\mathrm{C^{(4)}}$ constants
+	for time derivative preconditioning and artificial viscosity was performed for 
+	the manufactured case and their effect on the solution	discussed.
+\end{abstract}
+
+%% -------------------------------------------------------------------------
+
+\section{Introduction}
+
+The 2D incompressible Navier-Stokes equations with time derivative preconditioning
+and artificial viscosity are given by
+%
+\begin{align} \label{eqn:2dns}
+	\frac{1}{\beta^2} \pf{p}{t} + \rho \pf{u}{x} + \rho \pf{v}{y} &= S \\
+	\rho \pf{u}{t} + \rho u \pf{u}{x} + \rho v \pf{u}{y} + \pf{p}{x} &= 
+		\mu \pf[2]{u}{x} + \mu \pf[2]{u}{y} \\
+	\rho \pf{v}{t} + \rho u \pf{v}{x} + \rho v \pf{v}{y} + \pf{p}{y} &= 
+		\mu \pf[2]{v}{x} + \mu \pf[2]{v}{y},
+\end{align}
+%
+where $\beta^2 = \mathrm{max}(u^2 + v^2, \kappa \mathrm{U_{lid}}^2)$ is the time 
+derivative preconditioning term.  Acceptable values of $\kappa$ are between 0.001 
+and 0.9.  In the above equation, $S$ is the artificial viscosity term given by
+%
+\begin{equation} \label{eqn:S}
+	S = -\frac{|\lambda_x|_{\mathrm{max}} \mathrm{C}^{(4)}}{\beta^2} \pf[4]{p}{x}
+	    -\frac{|\lambda_y|_{\mathrm{max}} \mathrm{C}^{(4)}}{\beta^2} \pf[4]{p}{y},
+\end{equation}
+%
+where the largest eigenvalues in $(x,t)$ and $(y,t)$ are 
+$|\lambda_x|_{\mathrm{max}}$ and
+$|\lambda_y|_{\mathrm{max}}$, respectively.  The eigenvalues for this problem are 
+$\lambda_x = 0.5(|u| + \sqrt{u^2 + 4\beta^2})$ and 
+$\lambda_y = 0.5(|v| + \sqrt{v^2 + 4\beta^2})$.  The $\mathrm{C}^{(4)}$ constant
+generally lies in the range of $1/128 \leq \mathrm{C}^{(4)} \leq 1/16$.  Note
+the for the manufactured solution code verification, a source term was added to the
+right-hand side of each equation ($f_\mathrm{mass}(x,y)$, $f_\mathrm{xmtm}(x,y)$,
+and $f_\mathrm{ymtm}(x,y)$, respectively).
+
+%% -------------
+
+\subsection{Problems specification and solution technique}
+
+The cavity studied is square, with side lengths of \SI{0.05}{m} (also the characteristic length $L$), with the top surface moving at 
+$\mathrm{U_{lid}} = \SI{1}{m/s}$.  The
+density is \SI{1.0}{kg/m^3}.  For this problem, the Reynolds number is
+defined as
+%
+\begin{equation} \label{Re}
+	Re = \frac{\rho \mathrm{U_{lid}} L}{\mu}.
+\end{equation}
+%
+Three different Reynolds numbers of 100,~500, and 1000 run have the effect of
+changing the dynamic viscosity $\nu$ of the fluid.  Since the
+pressure difference is only used when solving the discretized equations (shown below),
+the pressure was rescaled  to a reference value of $\mathrm{p_{ref}} = 0.80133$
+at the center of the cavity after every iteration.  This prevents drift in the
+solution by anchoring it to a specific value.
+
+Since we are interested in only the steady-state solution, the discretized equations
+were marched in pseudo-time until the relative iterative residuals (calculated
+with the $L_2$ norm) were below \num{1e-10} for all quantities ($p$, $u$, $v$).
+The iterative residuals is
+%
+\begin{equation} \label{eqn:resid}
+	R_{i,j}^n = \sqrt{\frac{1}{N} \sum_{i,j}^N 
+		\frac{u_{i,j}^n - u_{i,j}^{n-1}}{dt_{i,j}}}
+\end{equation}
+%
+and is normalized by the iterative residual at iteration 4 to get the relative
+iterative residual.  This is what was used to monitor convergence.
+
+Local time stepping was used at each node to get maximum possible step at
+each iteration.  The time step is chosen based on the minimum of the
+diffusive ($t_d$) and convection ($t_c$) stability criteria.  The diffusive
+time scale is
+%
+\begin{equation*}
+	\Delta t_d \leq \frac{\Delta x \Delta y}{4 \nu},
+\end{equation*}
+%
+and the convective time scale is
+\begin{equation*}
+	\Delta t_c \leq \frac{\min(\Delta x, \Delta y)}{|\lambda|_\mathrm{max}},
+\end{equation*}
+%
+where $\Delta x$ and $\Delta y$ are the cell lengths.  The time step at each node
+was then chosen using $\Delta	 t = \mathrm{CFL} \cdot \min{\Delta t_d, \Delta t_c}$,
+where $\mathrm{CFL}$ is chosen so that the method is stable (and can be greater
+than unity depending on the solution method and Reynolds number).
+
+The boundary conditions for this problem are no slip along the walls.  Therefore
+on the bottom and sides, $u=v=0$, and along the top $u=U_\mathrm{lid}$, $v=0$.
+The pressure at the wall was found using linear interpolation from the
+interior.
+
+The discretization error and observed order of accuracy were determined from
+the manufactured solution results.  The discretization error is found by
+taking the norm of difference between the exact and numerical solutions of
+the equations.  The observed order is then found using
+%
+\begin{equation} \label{eqn:ooa}
+	\hat{p} = \frac{\ln(DE_2/DE_1)}{\ln r},
+\end{equation}
+%
+where subscript 2 and 1 are the coarse and fine mesh, respectively and $r$
+is the grid refinement factor (this is two for all work presented here since
+grids were systematically refined).  Monitoring discretization error norms
+and observed order of accuracy ensure the numerical schemes are working as
+predicted.
+
+Two schemes are implemented to solve the discretized equations.  The first is
+point-Jacobi~(PJ), which uses central differences in space and uses information
+at the previous time step to update the vector of unknowns.  The second is
+symmetric Gauss-Seidel (SGS), which uses a forward and backward sweep through
+the domain, using the newest information to update the vector of unknowns at
+intermediate time steps.  SGS requires more computations per iterations, but
+it converges faster and can be more stable (allows for higher $\mathrm{CFL}$
+numbers).
+
+%% -------------
+
+\subsection{Code setup and data analysis pipeline}
+
+The code used for this study was modified from the C template provided.
+The relevant functions for time steps, artificial viscosity, point-Jacboi,
+symmetric Gauss-Seidel, and discretization error norms was added.  The
+code was compiled using the version 3.1 of the clang compiler
+(\url{http://clang.llvm.org/} with \texttt{-O3} compiler optimizations for
+increased speed.  This compiler was selected because of its useful debug messages
+and faster speed than the classic GNU compiler collection.  Additionally, the 
+code was modified so that the user only
+has to change a few parameters at the top of the file and perform a 
+\texttt{make run3} to run the case.  This allowed multiple runs to be performed
+simultaneously.  All cases were run on an Ubuntu~12.10 machine with eight
+hyperthreaded cores (i7-3630QM CPU@2.40GHz).  Each run used 100\% of a
+hyper-threaded core.  The code is stored on
+GitHub at \url{github.com/isaacyeaton/adv-intro-cfd-2012}.  Plotting was done 
+in both \textsc{ParaView} and Python.  With this code, the symmetric Gauss-Siedel 
+method used  most often because it allowed for CFL numbers greater than unity 
+in most cases
+and converged in fewer iterations that point Jacobi.  Note that both schemes
+ran fairly quickly with this configuration (maximum of 26~minutes to run
+the manufactured solution on a \mesh{257} grid).  Additionally,
+\textsc{OpenFOAM-2.1.1-221db2718bbb} was used the check the solution from
+the C code.
+
+%% -------------------------------------------------------------------------
+
+\newpage
+
+\section{Manufactured solution results}
+
+\subsection{Velocity and pressure profiles}
+
+Contour plots of manufactured solution and iterative residual for different
+mesh sizes and solution methods are shown in figure~\ref{fig:MMS}.  The contour
+plots match those of the exact solution well (not shown because of space
+considerations).  The iterative residuals are shown for u-velocity, but pressure
+and v-velocity show the same trend.  Note that the SGS scheme converges in
+fewer iterations than PJ for all meshes.  This is more pronounced as the 
+mesh size increases.
+
+\begin{figure}[hb]
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_u.eps}
+		\caption{u-velocity}
+		\label{fig:MMS_u}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_v.eps}
+		\caption{v-velocity}
+		\label{fig:MMS_v}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_p.eps}
+		\caption{pressure}
+		\label{fig:MMS_p}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=.95\textwidth]{./figs/MMS_history.eps}
+		\caption{iterative residuals}
+		\label{fig:MMS_history}
+	\end{subfigure}
+	\caption{Manufactured solution results and iterative converge.  Contour
+		plot were made with a mesh of \mesh{257} nodes and SGS method with
+		a CLF=0.01, $\mathrm{C^{(4)}}$, and $\kappa$ value of 0.1.}
+	\label{fig:MMS}
+\end{figure}
+
+\clearpage
+
+%% -------------
+
+\subsection{Effect of $\kappa$ constant}
+
+The $\kappa$ constant in the time derivative preconditioning term effects how 
+quickly the solution converges, by affecting the time derivative term in the
+continuity equation.  This effect is shown in figure~\ref{fig:MMS_kappa}.  We see
+that by increasing the $\kappa$ value, the solution converges marginally faster.
+However, this effect if not very noticeable for smallest two values of
+0.01 and 0.1.  There might be a more dramatic effect is point-Jacobi was used
+since it generally requires more iterations to complete than SGS.  By modifying
+this constant, one can modify the convergence and possible make something that
+would be unstable converge.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[scale=.5]{./figs/MMS_kappa.eps}
+	\caption{Effect of time derivative preconditioning constant $\kappa$ on
+		iterative convergence history of pressure.  Note that this parameter has
+		little effect on the convergence of u- and v-velocities, so they 
+		are now shown.}
+	\label{fig:MMS_kappa}
+\end{figure}
+
+%% -------------
+
+\subsection{Effect of $\mathrm{C^{(4)}}$ constant}
+
+Since the continuity equation has no diffusion or viscous terms in it, it
+is susceptible to odd-even decouple, where adjacent nodes have different numerical
+behavior when using central differences.  This is alleviated by introducing
+an artificial viscosity term, as in \eqn{eqn:S}.  One way to control the
+strength of this is with the $\mathrm{C^{(4)}}$ constant, with higher values leading
+to more coupling. The artificial viscosity term increases when there are large
+pressure gradients (such as in the corners of the flow), and gets smaller when
+the mesh is refined.  Since the effect of $S$ decreases as $\Delta x^3$ it has
+little effect on the order of accuracy of the scheme.
+This was investigated at the upper left of the cavity,
+where pressure gradients are strongest.
+
+The effect of $\mathrm{C^{(4)}}$ is shown in \fig{fig:MMS_C4}, which shows contour
+plots of discretization error of pressure in the upper left corner of the flow, with
+the zero contour drawn.  As $\mathrm{C^{(4)}}$ increases, we see discretization 
+errors that are lower farther from the wall.  TODO: finish here
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_C4_008.eps}
+		\caption{$\mathrm{C^{(4)}} = 0.008$}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_C4_01.eps}
+		\caption{$\mathrm{C^{(4)}} = 0.01$}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_C4_04.eps}
+		\caption{$\mathrm{C^{(4)}} = 0.04$}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_C4_0625.eps}
+		\caption{$\mathrm{C^{(4)}} = 0.0625$}
+	\end{subfigure}
+	\caption{Effect of $\mathrm{C^{(4)}}$ constant on normalized discretization
+		error for pressure for the manufactured solution using a mesh of
+		\mesh{129} nodes and $\kappa = 0.1$.  The zero contour is also drawn.}
+	\label{fig:MMS_C4}
+\end{figure}
+
+%% -------------
+
+\subsection{Discretization errors}
+
+The discretization error norms are calculated as in \eqn{eqn:ooa} using
+the $L_1$, $L_2$, and $L_\infty$ norms and plotted against grid refinement 
+factor $h$ in \fig{fig:MMS_accuracy}.  The discretization norms follow the expected
+trend of decreasing linearly on a log-log plot with decreasing $h$ 
+(larger number of nodes).
+The observed order of accuracy also shows the expected trend.  As the
+grid is refined more, the norms decrease to two, indicating a second-order
+accurate scheme.  Note that the $L_\infty$ for pressure has a lower observed order.
+This is due to the larger pressure singularity at the corners of the flow
+with decreasing mesh size.
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_DE_norms.eps}
+		\caption{DE norms}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/MMS_OOA.eps}
+		\caption{Order of accuracy}
+	\end{subfigure}
+	\caption{Discretization errors and order of accuracy for the manufactured
+		solution.}
+	\label{fig:MMS_accuracy}
+\end{figure}
+
+%% -------------------------------------------------------------------------
+
+\newpage
+
+\section{Cavity flow}
+
+Figure~\ref{fig:cavity_100} shows the velocity and pressure profiles for the
+lid driven cavity at a Reynods number of 100 and a mesh of \mesh{257} nodes.
+We see a negative u-velocity in the center of the cavity as circulating.  There
+are also up and down swells in the v-velocity at the upper left and right corners,
+respectively.  Note that there is not much pressure change throughout the
+cavity.  The pressure at the upper corners increases with decreasing mesh size,
+indicating that there is a singularity there.
+
+\begin{figure}[hb]
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityU_Re=100.eps}
+		\caption{u-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityV_Re=100.eps}
+		\caption{v-velocity}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityP_Re=100.eps}
+		\caption{pressure}
+	\end{subfigure}
+	\caption{Driven cavity solution using a \mesh{257} nodes and SGS method with
+		a CFL number of 1.2, $\mathrm{C^{(4)}}$, and $\kappa$ value of 0.1.}
+	\label{fig:cavity_100}
+\end{figure}
+
+\clearpage
+
+%% -------------
+
+\subsection{Reynolds number effects}
+
+Figure~\ref{fig:cavity_Re_effects} shows the Reynolds number dependence when it is 
+increased from 100 to 1000.  We see that the center of recirculation
+moves lower and towards the center and that its magnitude increases.  Also,
+the v-velocity profiles becomes more symmetric about the center line.  Note that
+as the Reynolds number increases, the recirculation zones in the lower corners
+increases in size, protruding more into the center of the flow.  Also, the 
+recirculation zone at the top left corner of the lid grows.  
+The pressure is not plotting
+because it does not change greatly with the different Reynolds numbers.
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityU_Re=100.eps}
+		\caption{Re = 100}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityV_Re=100.eps}
+		\caption{Re = 100}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityU_Re=500.eps}
+		\caption{Re = 500}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityV_Re=500.eps}
+		\caption{Re = 500}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityU_Re=1000.eps}
+		\caption{Re = 1000}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityV_Re=1000.eps}
+		\caption{Re = 1000}
+	\end{subfigure}
+	\caption{Reynolds number effects for the cavity.  The left column
+		    is u-velocity, and the right is v-velocity.}
+	\label{fig:cavity_Re_effects}
+\end{figure}
+
+%% -------------
+
+\subsection{Comparison to \textsc{OpenFOAM}}
+
+\textsc{OpenFOAM} was used to check cavity results at the $\mathrm{Re}=100$
+cases.  \textsc{OpenFOAM} was run for mesh sizes of \mesh{41}, \mesh{81}, and
+\mesh{161}.
+The \mesh{81} mesh was used to compare to the \mesh{257} case shown above in
+figure~\ref{fig:cavity_100}.  This results is shown in \fig{fig:openfoam}.
+The greatest discrepancy is in pressure, which is reasonable since the
+\textsc{OpenFOAM} calculation was doing no pressure rescaling (in
+fact it was set to zero gage pressure thoughout the domain).  However, bot the
+u- and v-velocity contour plots show the same same structures and are very
+close in size and magnitude.
+
+\begin{figure}[p]
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/compare_257x257_U_Re=100.png}
+		\caption{C code, u-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/openfoam_u_81x81.png}
+		\caption{\textsc{OpenFOAM} u-velocity}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/compare_257x257_V_Re=100.png}
+		\caption{C code, v-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/openfoam_v_81x81.png}
+		\caption{\textsc{OpenFOAM} v-velocity}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/compare_257x257_P_Re=100.png}
+		\caption{C code, pressure}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/openfoam_p_81x81.png}
+		\caption{\textsc{OpenFOAM} pressure}
+	\end{subfigure}
+	\caption{Check of the code against \textsc{OpenFOAM} for the $Re=100$ case.}
+	\label{fig:openfoam}
+\end{figure}
+
+\clearpage
+
+%% -------------------------------------------------------------------------
+
+\section{Proof of version control}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=.7\textwidth]{./figs/git_proof.png}
+	\caption{Git diff of the C file for iteraive residual code.}
+\end{figure}
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=.7\textwidth]{./figs/git_proof1.png}
+	\caption{Git diff of the C file for point-Jacobi scheme.}
+\end{figure}
+
+\clearpage
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

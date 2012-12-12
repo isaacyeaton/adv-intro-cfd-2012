@@ -6,7 +6,9 @@
 *.mod
 
 # LaTeX
-
+*.pdf
+*.png
+*.eps
 *.acn
 *.acr
 *.alg

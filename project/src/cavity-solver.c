@@ -16,22 +16,25 @@
 #endif
 
 /************* Following are fixed parameters for array sizes **************/
-#define imax 17   	/* Number of points in the x-direction (use odd numbers only) */
-#define jmax 17   	/* Number of points in the y-direction (use odd numbers only) */
+#define imax 5   	/* Number of points in the x-direction (use odd numbers only) */
+#define jmax 5   	/* Number of points in the y-direction (use odd numbers only) */
 #define neq 3       /* Number of equation to be solved ( = 3: mass, x-mtm, y-mtm) */
 
 /*--------- User to change ---------------*/
-  const char basename[100] = "_SGS_17x17_Re=100_cfl=0.1.tec";
-  const int imms = 0;           /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
+
+  const char basename[100] = "_SGS_5x5_Re=10_cfl=0.9.tec";
+  const char fp1name[100]  = "./out_MMS/history";
+  const char fp2name[100]  = "./out_MMS/cavity";
+  
+  const int imms = 1;           /* Manufactured solution flag: = 1 for manuf. sol., = 0 otherwise */
   const int isgs = 1;           /* Symmetric Gauss-Seidel  flag: = 1 for SGS, = 0 for point Jacobi */
-  const double Re = 100.0;      /* Reynolds number = rho*Uinf*L/rmu */
-  const double cfl  = 0.1;      /* CFL number used to determine time step */
+  const int iterout = 1000000;       /* Number of time steps between solution output */
+  
+  const double Re = 10.0;      /* Reynolds number = rho*Uinf*L/rmu */
+  const double cfl  = .9;      /* CFL number used to determine time step */
   const double rkappa = 0.1;   	/* Time derivative preconditioning constant */
   const double Cx = 0.01;     	/* Parameter for 4th order artificial viscosity in x */
-  const double Cy = 0.01;      	/* Parameter for 4th order artificial viscosity in y */
-  
-  const char fp1name[100] = "./history";
-  const char fp2name[100] = "./cavity";
+  const double Cy = 0.01;      /* Parameter for 4th order artificial viscosity in y */
 
 /**********************************************/
 /****** All Global variables declared here. ***/
@@ -60,8 +63,7 @@
   
 /*--------- User sets inputs here  --------*/
 
-  const int nmax = 500000;        /* Maximum number of iterations */
-  const int iterout = 5000;       /* Number of time steps between solution output */
+  const int nmax = 2000000;        /* Maximum number of iterations */
   const int printout = 100;        /* How often to print iterative residuals to screen */
   const int headerout = 10000;      /* How often to print header to screen */
 
