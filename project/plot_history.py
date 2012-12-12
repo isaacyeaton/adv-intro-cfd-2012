@@ -1,4 +1,6 @@
-"""Tool to plot the history of a run using the history.dat file.
+"""Tool to plot the history of a run using history.tec files.
+   This file is used for make some plots in the report of iterative
+   residuals.
 """
 
 import numpy as np

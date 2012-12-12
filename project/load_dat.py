@@ -1,3 +1,6 @@
+"""Code to read in the last iteration of a cavity_*.tec file
+   to make contour plots and calculate discretization erros.
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -142,7 +145,7 @@ def find_phat(DE, r=2.):
 
 
 save_dir = '/home/isaac/Desktop/adv-intro-cfd-2012/project/report/figs/'
-save_figures = True
+save_figures = False
 gr = 1.61803398875  # golden ratio
 
 ### Make contour plots of manufactured solution
@@ -242,37 +245,6 @@ ax.set_ylabel('observed order of accuracy, p')
 #save_fig(fig, 'MMS_OOA')
 
 
-def find_gci(d2, d1, p=2, Fs=3, r=2):
-    """Grid Convergence Index using Roache (1994) method.
-
-    Inputs:
-        x2 (array) - grid of the coarse mesh
-        x1 (array) - grid of the fine mesh
-        f2 (array) - solution on coarse mesh
-        f1 (array) - solution on fine meash
-        p (float) - order of accuracy
-        FS (default=3) - factor of safety
-        r (default=2) - grid refinement factor
-    
-    Outputs:
-        gci (float) - grid convergence index of fine grid
-    """
-    
-    x2, f2 = d2[:, 0], d2[:, 1]
-    x1, f1 = d1[:, 0], d1[:, 1]
-    
-    assert len(f1) > len(f2)
-    
-    # common grid points for both meshes
-    f1_mask = np.in1d(x1, x2)
-    
-    c = np.float(Fs) / (r**p - 1)
-    gci = c * np.abs((f2 - f1[f1_mask]) / f1[f1_mask])
-    
-    return x2, gci
-
-
-
 ##### Effect of C4 constant #################################################
 
 c4_base = './out_MMS/cavity_C4={0}_SGS_129x129_Re=10_cfl=0.5.tec'
@@ -355,7 +327,6 @@ for idx, f in enumerate(re_files):
     n, dd = load_tec('./out_cavity/' + f)
     plot_cavity(dd, res[idx])
 
-
 ## try to make a streamplot
 #n, dd = load_tec('./out_cavity/' + re_files[0])
 #x, y = dd[0, :, 0], dd[:, 0, 1]
@@ -364,7 +335,145 @@ for idx, f in enumerate(re_files):
 #y = np.around(x, decimals=4)
 #plt.figure()
 #streamplot(x, y, u, v, density=5)
-    
 
+
+##### GCI for different Reynolds number cases ################################
+
+L2 = lambda xx: np.sqrt(np.sum(np.abs(xx.flatten()**2))/ xx.size)
+
+def find_gci(f2, f1, p=2., Fs=3., r=2.):
+    """Grid Convergence Index using Roache (1994) method.
+
+    Inputs:
+        f2 (array) - solution on coarse mesh
+        f1 (array) - solution on fine meash
+        p (default=2) - order of accuracy
+        FS (default=3) - factor of safety
+        r (default=2) - grid refinement factor
+    
+    Outputs:
+        gci (float) - grid convergence index of fine grid over the
+                      entire domain
+    """
+    
+    assert f1.size > f2.size
+    assert np.allclose(f2[:, :, 0], f1[::2, ::2, 0])
+    assert np.allclose(f2[:, :, 1], f1[::2, ::2, 1])
+    nnodes = f2.shape[0]
+    
+    c = np.float(Fs) / (r**p - 1)
+    gci = np.zeros((nnodes, nnodes, 3))
+    for i in range(3):
+        # pressure, u-vel, v-vel
+        ff2 = f2[:, :, i+2]
+        ff1 = f1[::2, ::2, i+2]
+        gci[:, :, i] = c * np.abs((ff2 - ff1) / ff1)
+    
+    X, Y = f2[:, :, 0].reshape(nnodes, nnodes), f2[:, :, 1].reshape(nnodes, nnodes)
+    return X, Y, gci
+
+
+ff_100 = '''cavity_SGS_33x33_Re=100_cfl=.05.tec
+cavity_SGS_65x65_Re=100_cfl=0.5.tec
+cavity_SGS_129x129_Re=100_cfl=1.2.tec
+cavity_SGS_257x257_Re=100_cfl=1.2.tec'''.split('\n')
+
+names = ['33x33 - 65x65',
+         '65x65 - 129x129',
+         '129x129 - 257x257']
+Re = 100
+ff = ff_100
+
+from matplotlib import colors, ticker
+
+for i in range(len(ff) - 1):
+    nodes0, dd0 = load_tec('./out_cavity/' + ff[i])  # coarse
+    nodes1, dd1 = load_tec('./out_cavity/' + ff[i+1])  # fine
+
+    X, Y, gci = find_gci(dd0, dd1)
+    
+    zz = gci[:, :, 0]
+    z = np.ma.masked_where(np.isnan(zz), zz)
+    #lev_exp = np.arange(np.floor(np.log10(z.min() + .0001)-1),
+    #                    np.ceil(np.log10(z.max())+1), .5)
+    lev_exp = np.arange(-6.0, 2.75, .25)
+    levs = np.power(10, lev_exp)
+    
+    plt.figure()
+    plt.contourf(X, Y, z, levs, norm=colors.LogNorm())
+    cb = plt.colorbar()
+    cb.set_label(names[i])
+    plt.xlabel('x, m')
+    plt.ylabel('y, m')
+    #plt.savefig(save_dir + 'GCI_Re={0}_{1}_p.eps'.format(Re, names[i]),
+    #            bbox_inches='tight', pad_inches=0)
+
+
+ff_500 = '''cavity_SGS_65x65_Re=500_cfl=0.05.tec
+cavity_SGS_129x129_Re=500_cfl=0.4.tec
+cavity_SGS_257x257_Re=500_cfl=0.4.tec'''.split('\n')
+
+names = ['65x65 - 129x129',
+         '129x129 - 257x257']
+Re = 500
+ff = ff_500
+
+from matplotlib import colors, ticker
+
+for i in range(len(ff) - 1):
+    nodes0, dd0 = load_tec('./out_cavity/' + ff[i])  # coarse
+    nodes1, dd1 = load_tec('./out_cavity/' + ff[i+1])  # fine
+
+    X, Y, gci = find_gci(dd0, dd1)
+    
+    zz = gci[:, :, 2]
+    z = np.ma.masked_where(np.isnan(zz), zz)
+    #lev_exp = np.arange(np.floor(np.log10(z.min() + .0001)-1),
+    #                    np.ceil(np.log10(z.max())+1), .5)
+    lev_exp = np.arange(-6.0, 2.75, .25)
+    levs = np.power(10, lev_exp)
+    
+    plt.figure()
+    plt.contourf(X, Y, z, levs, norm=colors.LogNorm())
+    cb = plt.colorbar()
+    cb.set_label(names[i])
+    plt.xlabel('x, m')
+    plt.ylabel('y, m')
+    #plt.savefig(save_dir + 'GCI_Re={0}_{1}_v.eps'.format(Re, names[i]),
+    #            bbox_inches='tight', pad_inches=0)
+
+### 1000
+
+ff_1000 = '''cavity_SGS_129x129_Re=1000_cfl=0.4.tec
+cavity_SGS_257x257_Re=1000_cfl=0.4.tec'''.split('\n')
+
+names = ['129x129 - 257x257']
+Re = 1000
+ff = ff_1000
+
+from matplotlib import colors, ticker
+
+for i in range(len(ff) - 1):
+    nodes0, dd0 = load_tec('./out_cavity/' + ff[i])  # coarse
+    nodes1, dd1 = load_tec('./out_cavity/' + ff[i+1])  # fine
+
+    X, Y, gci = find_gci(dd0, dd1)
+    
+    zz = gci[:, :, 2]
+    z = np.ma.masked_where(np.isnan(zz), zz)
+    #lev_exp = np.arange(np.floor(np.log10(z.min() + .0001)-1),
+    #                    np.ceil(np.log10(z.max())+1), .5)
+    lev_exp = np.arange(-6.0, 2.75, .25)
+    levs = np.power(10, lev_exp)
+    
+    plt.figure()
+    plt.contourf(X, Y, z, levs, norm=colors.LogNorm())
+    cb = plt.colorbar()
+    cb.set_label(names[i])
+    plt.xlabel('x, m')
+    plt.ylabel('y, m')
+    #plt.savefig(save_dir + 'GCI_Re={0}_{1}_v.eps'.format(Re, names[i]),
+    #            bbox_inches='tight', pad_inches=0)
+                    
 ## Show the figures
 plt.show()

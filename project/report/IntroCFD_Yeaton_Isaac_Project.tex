@@ -45,7 +45,7 @@
             citecolor=black, urlcolor=black}
 
 % include code
-\lstset{language=Python, basicstyle=\footnotesize, frame=single,
+\lstset{language=C, basicstyle=\footnotesize, frame=single,
         numbers=left}
 
 % bibliography
@@ -95,21 +95,25 @@
 %% -------------------------------------------------------------------------
 
 \begin{abstract}
-	Two-dimensional, lid-driven cavity flow was solved using CFD code for 
+	Two-dimensional, lid-driven cavity flow was solved using CFD codes for 
 	Reynolds numbers
 	of 100, 500, and 1000 using the 2D~incompressible Navier-Stokes equations
 	with time derivative preconditioning (temperature and viscosity were assumed
 	constant).  The code was checked with the method of manufactured solutions
 	for both a point Jacobi and symmetric Gauss-Seidel numerical schemes.  This
 	was done at a Reynolds number of 10 and used to show the observed order of
-	accuracy approaches second-order with mesh refinement.  Symmetric meshes
-	of \mesh{65}, \mesh{129}, \mesh{257}, and \mesh{513} nodes were run. 
+	accuracy approaches second-order with mesh refinement.  A study of mesh size,
+	$\kappa$, and $\mathrm{C^{(4)}}$ constants
+	for time derivative preconditioning and artificial viscosity was performed for 
+	the manufactured case and their effect on the solution is	discussed.  
+	Symmetric meshes
+	of \mesh{33}, \mesh{65}, \mesh{129}, and \mesh{257} nodes were run. 
 	Additionally, textsc{OpenFOAM} was used to check the lid driven cavity case
 	and the comparison shows very similar results, with minor discrepancies
-	for the pressure.  A study of mesh size, $\kappa$, and 
-	$\mathrm{C^{(4)}}$ constants
-	for time derivative preconditioning and artificial viscosity was performed for 
-	the manufactured case and their effect on the solution	discussed.
+	for the pressure.  The Grid Convergence index analysis for the driven cavity case
+	was also performed and showed increased convergence as the mesh is refined.  Also,
+	at higher Reynolds numbers, the GCI is higher, indicating a less converged
+	solution.
 \end{abstract}
 
 %% -------------------------------------------------------------------------
@@ -194,10 +198,9 @@ and the convective time scale is
 \end{equation*}
 %
 where $\Delta x$ and $\Delta y$ are the cell lengths.  The time step at each node
-was then chosen using $\Delta	 t = \mathrm{CFL} \cdot \min{\Delta t_d, \Delta t_c}$,
+was then chosen using $\Delta	 t = \mathrm{CFL} \cdot \min(\Delta t_d, \Delta t_c)$,
 where $\mathrm{CFL}$ is chosen so that the method is stable (and can be greater
 than unity depending on the solution method and Reynolds number).
-
 The boundary conditions for this problem are no slip along the walls.  Therefore
 on the bottom and sides, $u=v=0$, and along the top $u=U_\mathrm{lid}$, $v=0$.
 The pressure at the wall was found using linear interpolation from the
@@ -218,6 +221,22 @@ grids were systematically refined).  Monitoring discretization error norms
 and observed order of accuracy ensure the numerical schemes are working as
 predicted.
 
+To estimate the numerical uncertainty of the steady-state solution for the
+driven cavity case (where no analytical solution is available), the Grid 
+Convergence Index (GCI) is used \cite{roache1994perspective}.  The GCI is define as
+%
+\begin{equation}  \label{eqn:gci}
+	GCI = \frac{F_s}{r^p - 1} \left| \frac{f_2 - f_1}{f_1} \right|,
+\end{equation}
+%
+where $F_s$ is the factor of safety (3 for this study), $r$ is the grid refinement
+factor (2 for the grids used), and $p$ is the observed order of accuracy, and
+$f$ is the numerical solution at
+the different node locations for the coarse (subscript 2) and fine (subscript 1)
+grids.  Note that this assumes one
+is in the asymptotic regime, which can be checked by observing the iterative
+residual plot.
+
 Two schemes are implemented to solve the discretized equations.  The first is
 point-Jacobi~(PJ), which uses central differences in space and uses information
 at the previous time step to update the vector of unknowns.  The second is
@@ -225,7 +244,8 @@ symmetric Gauss-Seidel (SGS), which uses a forward and backward sweep through
 the domain, using the newest information to update the vector of unknowns at
 intermediate time steps.  SGS requires more computations per iterations, but
 it converges faster and can be more stable (allows for higher $\mathrm{CFL}$
-numbers).
+numbers).  Both schemes used the governing equations discretized using
+central-differences.
 
 %% -------------
 
@@ -266,9 +286,10 @@ Contour plots of manufactured solution and iterative residual for different
 mesh sizes and solution methods are shown in figure~\ref{fig:MMS}.  The contour
 plots match those of the exact solution well (not shown because of space
 considerations).  The iterative residuals are shown for u-velocity, but pressure
-and v-velocity show the same trend.  Note that the SGS scheme converges in
-fewer iterations than PJ for all meshes.  This is more pronounced as the 
-mesh size increases.
+and v-velocity show the same trend (note: v-velocity was the slowest to
+converge using both schemes).  The symmetric Gauss-Seidel scheme converges in
+fewer iterations than point-Jacobi for all meshes and was shorter for the
+code to run.  This became more pronounced as the mesh size increased.
 
 \begin{figure}[hb]
 	\centering
@@ -301,7 +322,10 @@ mesh size increases.
 	\end{subfigure}
 	\caption{Manufactured solution results and iterative converge.  Contour
 		plot were made with a mesh of \mesh{257} nodes and SGS method with
-		a CLF=0.01, $\mathrm{C^{(4)}}$, and $\kappa$ value of 0.1.}
+		a CLF=0.01, $\mathrm{C^{(4)}} = 0.01$, and $\kappa = 0.1$.
+		Note that in the iterative residual plot, the larger meshes do converge, 
+		but that is not shown to
+		better show convergence for the smaller meshes.}
 	\label{fig:MMS}
 \end{figure}
 
@@ -313,13 +337,16 @@ mesh size increases.
 
 The $\kappa$ constant in the time derivative preconditioning term effects how 
 quickly the solution converges, by affecting the time derivative term in the
-continuity equation.  This effect is shown in figure~\ref{fig:MMS_kappa}.  We see
+continuity equation, as shown in figure~\ref{fig:MMS_kappa}.  This plot only
+shows pressure since there is no preconditioning term in the $x$ and $y$
+momentum equations.  We see
 that by increasing the $\kappa$ value, the solution converges marginally faster.
 However, this effect if not very noticeable for smallest two values of
 0.01 and 0.1.  There might be a more dramatic effect is point-Jacobi was used
 since it generally requires more iterations to complete than SGS.  By modifying
 this constant, one can modify the convergence and possible make something that
-would be unstable converge.
+would be unstable converge.  This technique was used when running the 
+driven cavity at higher Reynolds numbers on smaller meshes.
 
 \begin{figure}[h]
 	\centering
@@ -333,14 +360,17 @@ would be unstable converge.
 
 %% -------------
 
+\newpage
+
 \subsection{Effect of $\mathrm{C^{(4)}}$ constant}
 
 Since the continuity equation has no diffusion or viscous terms in it, it
 is susceptible to odd-even decouple, where adjacent nodes have different numerical
 behavior when using central differences.  This is alleviated by introducing
-an artificial viscosity term, as in \eqn{eqn:S}.  One way to control the
+an artificial viscosity term, as in \eqn{eqn:S} \cite{choi1993application}.  
+One way to control the
 strength of this is with the $\mathrm{C^{(4)}}$ constant, with higher values leading
-to more coupling. The artificial viscosity term increases when there are large
+to more decoupling. The artificial viscosity term increases when there are large
 pressure gradients (such as in the corners of the flow), and gets smaller when
 the mesh is refined.  Since the effect of $S$ decreases as $\Delta x^3$ it has
 little effect on the order of accuracy of the scheme.
@@ -350,9 +380,12 @@ where pressure gradients are strongest.
 The effect of $\mathrm{C^{(4)}}$ is shown in \fig{fig:MMS_C4}, which shows contour
 plots of discretization error of pressure in the upper left corner of the flow, with
 the zero contour drawn.  As $\mathrm{C^{(4)}}$ increases, we see discretization 
-errors that are lower farther from the wall.  TODO: finish here
+errors increase.  Also, the zero contour is pushed farther out into the center of
+the cavity and the solution under-estimates the pressure (dark purple colors).
+It appears using a lower $\mathrm{C^{(4)}}$ for this problem is desirable since
+it leads to lower discretization error in pressure.
 
-\begin{figure}
+\begin{figure}[h]
 	\centering
 	\begin{subfigure}[b]{0.475\textwidth}
 		\centering
@@ -392,13 +425,15 @@ the $L_1$, $L_2$, and $L_\infty$ norms and plotted against grid refinement
 factor $h$ in \fig{fig:MMS_accuracy}.  The discretization norms follow the expected
 trend of decreasing linearly on a log-log plot with decreasing $h$ 
 (larger number of nodes).
-The observed order of accuracy also shows the expected trend.  As the
+The observed order of accuracy also shown in \fig{fig:MMS_accuracy}
+and shows the expected trends.  As the
 grid is refined more, the norms decrease to two, indicating a second-order
 accurate scheme.  Note that the $L_\infty$ for pressure has a lower observed order.
 This is due to the larger pressure singularity at the corners of the flow
-with decreasing mesh size.
+with decreasing mesh size and that this norm finds the largest value (it is locating
+this singularity).
 
-\begin{figure}
+\begin{figure}[h]
 	\centering
 	\begin{subfigure}[b]{0.475\textwidth}
 		\centering
@@ -428,7 +463,14 @@ We see a negative u-velocity in the center of the cavity as circulating.  There
 are also up and down swells in the v-velocity at the upper left and right corners,
 respectively.  Note that there is not much pressure change throughout the
 cavity.  The pressure at the upper corners increases with decreasing mesh size,
-indicating that there is a singularity there.
+indicating that there is a singularity there.  Also shown in \fig{fig:cavity_100}
+is the grid convergence index for u-velocity and pressure.  We see that as 
+the grid is refined, the GCI does in fact decrease.  Also, for the pressure GCI
+at the finest meshes, the solution is very well converged (more so than the
+velocities, see~\fig{fig:cavity_Re_effects}).  I believe this is because
+the pressure generally converged faster than the velocities, and that the 
+u-velocity converged faster than v-velocity, so that when they converged, the
+iterative residual in pressure was much below the cutoff of \num{1e-10}.
 
 \begin{figure}[hb]
 	\centering
@@ -440,21 +482,41 @@ indicating that there is a singularity there.
 	~
 	\begin{subfigure}[b]{0.475\textwidth}
 		\centering
-		\includegraphics[width=\textwidth]{./figs/cavityV_Re=100.eps}
-		\caption{v-velocity}
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=100_33x33-65x65.eps}
+		\caption{GCI u-velocity, coarse}
 	\end{subfigure}
 	
 	\begin{subfigure}[b]{0.475\textwidth}
 		\centering
+		\includegraphics[width=\textwidth]{./figs/cavityV_Re=100.eps}
+		\caption{v-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=100_65x65-129x129.eps}
+		\caption{GCI u-velocity, medium}
+		
+	\end{subfigure}
+		\begin{subfigure}[b]{0.475\textwidth}
+		\centering
 		\includegraphics[width=\textwidth]{./figs/cavityP_Re=100.eps}
 		\caption{pressure}
 	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=100_129x129-257x257_p.eps}
+		\caption{GCI pressure, fine}
+	\end{subfigure}
+	
 	\caption{Driven cavity solution using a \mesh{257} nodes and SGS method with
-		a CFL number of 1.2, $\mathrm{C^{(4)}}$, and $\kappa$ value of 0.1.}
+		a CFL number of 1.2, $\mathrm{C^{(4)}}=0.01$, and $\kappa=0.1$.
+		Also shown are the GCI for u-velocity at for meshes of 
+		\mesh{33} -- \mesh{65} and \mesh{65} -- \mesh{129}, and for pressure with
+		\mesh{129} -- \mesh{257}.}
 	\label{fig:cavity_100}
 \end{figure}
-
-\clearpage
 
 %% -------------
 
@@ -508,8 +570,58 @@ because it does not change greatly with the different Reynolds numbers.
 		\caption{Re = 1000}
 	\end{subfigure}
 	\caption{Reynolds number effects for the cavity.  The left column
-		    is u-velocity, and the right is v-velocity.}
+		    is u-velocity and the right is v-velocity.}
 	\label{fig:cavity_Re_effects}
+\end{figure}
+
+Figure~\ref{fig:gci_re} shows the Reynolds number dependence of grid
+convergence index for between the finest (\mesh{257}) and second to finest
+(\mesh{129}) meshes for both u- and v-velocity.  We see that the GCI is lowest
+with for the smallest Reynolds number and that it follows flow features/gradients
+in the flow, such as the high velocity at the top of the cavity.  Also,
+as Reynolds number increases, the areas of low and high GCI become more localized
+along these gradients in the flow.
+
+\begin{figure}[p]
+	\centering
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=100_129x129-257x257.eps}
+		\caption{Re=100, u-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=100_129x129-257x257_v.eps}
+		\caption{Re=100, v-velocity}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=500_129x129-257x257.eps}
+		\caption{Re=500, u-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=500_129x129-257x257_v.eps}
+		\caption{Re=500, v-velocity}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=1000_129x129-257x257.eps}
+		\caption{Re=1000, u-velocity}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.475\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./figs/GCI_Re=1000_129x129-257x257_v.eps}
+		\caption{Re=1000, v-velocity}
+	\end{subfigure}
+	\caption{Comparison of grid convergence index for u- and v-velocities for
+		different Reynolds numbers.}
+	\label{fig:gci_re}
 \end{figure}
 
 %% -------------
@@ -523,7 +635,7 @@ The \mesh{81} mesh was used to compare to the \mesh{257} case shown above in
 figure~\ref{fig:cavity_100}.  This results is shown in \fig{fig:openfoam}.
 The greatest discrepancy is in pressure, which is reasonable since the
 \textsc{OpenFOAM} calculation was doing no pressure rescaling (in
-fact it was set to zero gage pressure thoughout the domain).  However, bot the
+fact it was set to zero gage pressure thoughout the domain).  However, both the
 u- and v-velocity contour plots show the same same structures and are very
 close in size and magnitude.
 
@@ -572,6 +684,34 @@ close in size and magnitude.
 
 %% -------------------------------------------------------------------------
 
+\section{Conclusions}
+
+Lid driven cavity flow has been solved using CFD code and verified using
+the method of manufactured solutions.  The effect of time derivative 
+preconditioning on iterative convergence was investigated and showed that
+by increasing this value, the pressure solution converged sooner.  The 
+$\mathrm{C^{(4)}}$ constant used in the artificial viscosity was also varied
+over its allowable range.  Lower values are suggested for this problem, since
+it leads to lower discretization error in pressure, esp.\ near the wall.  Also,
+mesh size was varied, with larger meshes taking more iterations to converge,
+but with lower discretization errors.  The observed order of accuracy for this problem
+is two, as expected from the central difference scheme used.  Reynolds number
+effects where check for the driven cavity case, with recirculation becoming
+stronger and the v-velocity profile becoming more symmetric about the vertical
+vertical centerline.  The C implementation was also checked against
+\textsc{OpenFOAM}, with both u- and v-velocity profiles agreeing very well.  There
+were slight differences in pressure, but that appears to be a uniform bias
+over the entire domain.
+
+%% -------------------------------------------------------------------------
+
+
+\bibliography{IntroCFD_Yeaton_Isaac_Project}
+
+%% -------------------------------------------------------------------------
+
+\newpage
+
 \section{Proof of version control}
 
 \begin{figure}[h]
@@ -587,5 +727,11 @@ close in size and magnitude.
 \end{figure}
 
 \clearpage
+
+\section{Source code}
+
+Here is the source code.
+
+\lstinputlisting{../src/cavity-solver.c}
 
 \end{document}
